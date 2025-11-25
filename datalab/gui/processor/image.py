@@ -231,6 +231,8 @@ class ImageProcessor(BaseProcessor[ImageROI, ROI2DParam]):
         """Register operations."""
         self.register_n_to_1(sipi.addition, _("Sum"), icon_name="sum.svg")
         self.register_n_to_1(sipi.average, _("Average"), icon_name="average.svg")
+        self.register_n_to_1(sipi.minimum, _("Minimum"))
+        self.register_n_to_1(sipi.maximum, _("Maximum"))
         self.register_n_to_1(
             sipi.standard_deviation,
             _("Standard deviation"),
