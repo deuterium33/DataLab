@@ -1127,6 +1127,8 @@ class BaseActionHandler(metaclass=abc.ABCMeta):
             self.action_for("astype", separator=True)
             self.action_for("average", separator=True)
             self.action_for("standard_deviation")
+            self.action_for("minimum")
+            self.action_for("maximum")
             self.action_for("quadratic_difference")
             self.action_for("convolution", separator=True)
             self.action_for("deconvolution")
