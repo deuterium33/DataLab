@@ -63,6 +63,8 @@ class SignalProcessor(BaseProcessor[SignalROI, ROI1DParam]):
         """Register operations."""
         self.register_n_to_1(sips.addition, _("Sum"), icon_name="sum.svg")
         self.register_n_to_1(sips.average, _("Average"), icon_name="average.svg")
+        self.register_n_to_1(sips.minimum, _("Minimum"))
+        self.register_n_to_1(sips.maximum, _("Maximum"))
         self.register_n_to_1(
             sips.standard_deviation,
             _("Standard deviation"),
