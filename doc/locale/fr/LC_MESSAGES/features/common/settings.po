@@ -5,18 +5,11 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: DataLab \n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-15 17:19+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
-"Language-Team: fr <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.17.0\n"
 
 msgid "Settings of DataLab, the open-source scientific data analysis and visualization platform"
 msgstr "Préférences de DataLab, la plateforme open-source d'analyse et de visualisation de données scientifiques"
@@ -57,6 +50,15 @@ msgstr "**Serveur RPC**"
 msgid "Enable the RPC (Remote Procedure Call) server to communicate with external applications, such as your own scripts running in Spyder, Jupyter, or other software. This allows programmatic control of DataLab."
 msgstr "Activer le serveur RPC (Remote Procedure Call) pour communiquer avec des applications externes, telles que vos propres scripts s'exécutant dans Spyder, Jupyter ou d'autres logiciels. Cela permet un contrôle programmatique de DataLab."
 
+msgid "**Web API localhost bypass**"
+msgstr "**Contournement localhost de l'API Web**"
+
+msgid "When enabled (default), connections from localhost (127.0.0.1) to the Web API do not require authentication. This simplifies notebook integration when DataLab-Kernel runs on the same machine. Disable for stricter security if needed."
+msgstr "Lorsque cette option est activée (par défaut), les connexions depuis localhost (127.0.0.1) vers l'API Web ne nécessitent pas d'authentification. Cela simplifie l'intégration des notebooks lorsque DataLab-Kernel s'exécute sur la même machine. Désactiver pour une sécurité plus stricte si nécessaire."
+
+msgid "When this option is enabled, any application running on your local machine can access the DataLab Web API without a token. Disable this option if you need stricter security."
+msgstr "Lorsque cette option est activée, toute application s'exécutant sur votre machine locale peut accéder à l'API Web DataLab sans jeton. Désactivez cette option si vous avez besoin d'une sécurité plus stricte."
+
 msgid "**Memory threshold**"
 msgstr "**Seuil de mémoire**"
 
@@ -66,14 +68,14 @@ msgstr "Définir un seuil (en Mo) en dessous duquel un avertissement est affich�
 msgid "**Third-party plugins**"
 msgstr "**Plugins tiers**"
 
-msgid "Enable or disable third-party plugins at startup."
-msgstr "Activer ou désactiver les plugins tiers au démarrage."
+msgid "Enable or disable third-party plugins immediately. Changes are applied without restarting DataLab. When disabled, third-party plugins are not discovered or loaded."
+msgstr "Activer ou désactiver immédiatement les plugins tiers. Les modifications sont appliquées sans redémarrer DataLab. Lorsqu'ils sont désactivés, les plugins tiers ne sont ni détectés ni chargés."
 
 msgid "**Plugins path**"
 msgstr "**Chemin des plugins**"
 
-msgid "Specify the directory path where DataLab should look for third-party plugins. DataLab will also discover plugins in your PYTHONPATH."
-msgstr "Spécifier le chemin du répertoire où DataLab doit rechercher les plugins tiers. DataLab découvrira également les plugins dans votre PYTHONPATH."
+msgid "Specify the directory path where DataLab should look for third-party plugins. DataLab will also discover plugins in your PYTHONPATH. To enable or disable individual plugins, use the ``Plugins > Configure plugins...`` menu action. DataLab then proposes reloading plugins automatically."
+msgstr "Indiquer le répertoire dans lequel DataLab doit rechercher les plugins tiers. DataLab détectera également les plugins présents dans votre PYTHONPATH. Pour activer ou désactiver des plugins individuellement, utilisez l'action de menu ``Plugins > Configurer les plugins...``. DataLab proposera ensuite de recharger automatiquement les plugins."
 
 msgid "Processing"
 msgstr "Traitement"

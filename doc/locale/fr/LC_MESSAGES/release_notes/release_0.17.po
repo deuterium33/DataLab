@@ -1,0 +1,210 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2023, DataLab Platform Developers
+# This file is distributed under the same license as the DataLab package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Version 0.17"
+msgstr ""
+
+msgid "DataLab Version 0.17.1 (2024-10-01)"
+msgstr "DataLab Version 0.17.1 (01/10/2024)"
+
+msgid "ℹ️ PlotPy v2.6.2 is required for this release."
+msgstr "ℹ️ PlotPy v2.6.2 est requis pour cette version."
+
+msgid "💥 New features and enhancements:"
+msgstr "💥 Nouvelles fonctionnalités et améliorations :"
+
+msgid "Image View:"
+msgstr "Vue Image :"
+
+msgid "Before this release, when selecting a high number of images (e.g. when selecting a group of images), the application was very slow because all the images were displayed in the image view, even if they were all superimposed on the same image"
+msgstr "Avant cette version, lors de la sélection d'un grand nombre d'images (par exemple lors de la sélection d'un groupe d'images), l'application était très lente car toutes les images étaient affichées dans la vue image, même si elles étaient toutes superposées sur la même image"
+
+msgid "The workaround was to enable the \"Show first only\" option"
+msgstr "La solution de contournement était d'activer l'option \"Afficher uniquement le premier\""
+
+msgid "Now, to improve performance, if multiple images are selected, only the last image of the selection is displayed in the image view if this last image has no transparency and if the other images are completely covered by this last image"
+msgstr "Maintenant, pour améliorer les performances, si plusieurs images sont sélectionnées, seule la dernière image de la sélection est affichée dans la vue image si cette dernière image n'a pas de transparence et si les autres images sont complètement recouvertes par cette dernière image"
+
+msgid "Clarification: action \"Show first only\" was renamed to \"Show first object only\", and a new icon was added to the action"
+msgstr "Clarification : l'action \"Afficher uniquement le premier\" a été renommée en \"Afficher uniquement le premier objet\", et une nouvelle icône a été ajoutée à l'action"
+
+msgid "API: added `width` and `height` properties to `ImageObj` class (returns the width and height of the image in physical units)"
+msgstr "API : ajout des propriétés `width` et `height` à la classe `ImageObj` (retourne la largeur et la hauteur de l'image en unités physiques)"
+
+msgid "Windows launcher \"start.pyw\": writing a log file \"datalab_error.log\" when an exception occurs at startup"
+msgstr "Lanceur Windows \"start.pyw\" : écriture d'un fichier journal \"datalab_error.log\" lorsqu'une exception se produit au démarrage"
+
+msgid "🛠️ Bug fixes:"
+msgstr "🛠️ Correctifs :"
+
+msgid "Changing the color theme now correctly updates all DataLab's user interface components without the need to restart the application"
+msgstr "Changer le thème de couleur met maintenant à jour correctement tous les composants de l'interface utilisateur de DataLab sans avoir besoin de redémarrer l'application"
+
+msgid "ℹ️ Other changes:"
+msgstr "ℹ️ Autres changements :"
+
+msgid "OpenCV is now an optional dependency:"
+msgstr "OpenCV est désormais une dépendance facultative :"
+
+msgid "This change is motivated by the fact that the OpenCV conda package is not maintained on Windows (at least), which leads to an error when installing DataLab with conda"
+msgstr "Ce changement est motivé par le fait que le paquet conda OpenCV n'est pas maintenu sur Windows (au moins), ce qui entraîne une erreur lors de l'installation de DataLab avec conda"
+
+msgid "When OpenCV is not installed, only the \"OpenCV blob detection\" feature won't work, and a warning message will be displayed when trying to use this feature"
+msgstr "Lorsque OpenCV n'est pas installé, seule la fonctionnalité \"Détection de blob OpenCV\" ne fonctionnera pas, et un message d'avertissement sera affiché lors de la tentative d'utilisation de cette fonctionnalité"
+
+msgid "DataLab Version 0.17.0 (2024-08-02)"
+msgstr "DataLab Version 0.17.0 (02/08/2024)"
+
+msgid "ℹ️ PlotPy v2.6 is required for this release."
+msgstr "ℹ️ PlotPy v2.6 est requis pour cette version."
+
+msgid "Menu \"Computing\" was renamed to \"Analysis\" for both Signal and Image panels, to better reflect the nature of the features in this menu"
+msgstr "Le menu \"Calcul\" a été renommé en \"Analyse\" pour les panneaux Signal et Image, pour mieux refléter la nature des fonctionnalités de ce menu"
+
+msgid "Regions Of Interest (ROIs) are now taken into account everywhere in the application where it makes sense, and not only for the old \"Computing\" menu (now \"Analysis\") features. This closes [Issue #93](https://github.com/DataLab-Platform/DataLab/issues/93). If a signal or an image has an ROI defined:"
+msgstr "Les régions d'intérêt (ROIs) sont désormais prises en compte partout dans l'application là où cela a du sens, et pas seulement pour les anciennes fonctionnalités du menu \"Calcul\" (maintenant \"Analyse\"). Cela clôture l'[Issue #93](https://github.com/DataLab-Platform/DataLab/issues/93). Si un signal ou une image a une ROI définie :"
+
+msgid "Operations are done on the ROI only (except if the operation changes the data shape, or the pixel size for images)"
+msgstr "Les opérations sont effectuées uniquement sur la ROI (sauf si l'opération modifie la forme des données, ou la taille des pixels pour les images)"
+
+msgid "Processing features are done on the ROI only (if the destination object data type is compatible with the source object data type, which excludes thresholding, for instance)"
+msgstr "Les fonctionnalités de traitement sont effectuées uniquement sur la ROI (si le type de données de l'objet de destination est compatible avec le type de données de l'objet source, ce qui exclut le seuillage, par exemple)"
+
+msgid "Analysis features are done on the ROI only, like before"
+msgstr "Les fonctionnalités d'analyse sont effectuées uniquement sur la ROI, comme avant"
+
+msgid "As a consequence of previous point, and for clarity:"
+msgstr "En conséquence du point précédent, et pour plus de clarté :"
+
+msgid "The \"Edit Regions of interest\" and \"Remove all Regions of interest\" features have been moved from the old \"Computing\" (now \"Analysis\") menu to the \"Edit\" menu where all metadata-related features are located"
+msgstr "Les fonctionnalités \"Modifier les régions d'intérêt\" et \"Supprimer toutes les régions d'intérêt\" ont été déplacées du vieux menu \"Calcul\" (maintenant \"Analyse\") vers le menu \"Édition\" où se trouvent toutes les fonctionnalités liées aux métadonnées"
+
+msgid "The \"Edit Regions of interest\" action has been added to both Signal and Image View vertical toolbars (in second position, after the \"View in a new window\" action)"
+msgstr "L'action \"Modifier les régions d'intérêt\" a été ajoutée aux barres d'outils verticales de la Vue Signal et Image (en deuxième position, après l'action \"Voir dans une nouvelle fenêtre\")"
+
+msgid "Following the bug fix on image data type conversion issues with basic operations, a new \"Arithmetic operation\" feature has been added to the \"Operations\" menu for both Signal and Image panels. This feature allows to perform linear operations on signals and images, with the following operations:"
+msgstr "Suite à la correction des problèmes de conversion du type de données des images avec les opérations de base, une nouvelle fonctionnalité \"Opération arithmétique\" a été ajoutée au menu \"Opérations\" pour les panneaux Signal et Image. Cette fonctionnalité permet d'effectuer des opérations linéaires sur les signaux et les images, avec les opérations suivantes :"
+
+msgid "Addition: ``obj3 = (obj1 + obj2) * a + b``"
+msgstr "Addition : ``obj3 = (obj1 + obj2) * a + b``"
+
+msgid "Subtraction: ``obj3 = (obj1 - obj2) * a + b``"
+msgstr "Soustraction : ``obj3 = (obj1 - obj2) * a + b``"
+
+msgid "Multiplication: ``obj3 = (obj1 * obj2) * a + b``"
+msgstr "Multiplication : ``obj3 = (obj1 * obj2) * a + b``"
+
+msgid "Division: ``obj3 = (obj1 / obj2) * a + b``"
+msgstr "Division : ``obj3 = (obj1 / obj2) * a + b``"
+
+msgid "Improved \"View in a new window\" and \"ROI editor\" dialog boxes size management: default size won't be larger than DataLab's main window size"
+msgstr "Amélioration de la gestion de la taille des boîtes de dialogue \"Voir dans une nouvelle fenêtre\" et \"Éditeur de ROI\" : la taille par défaut ne sera pas plus grande que la taille de la fenêtre principale de DataLab"
+
+msgid "ROI editor:"
+msgstr "Éditeur de ROI :"
+
+msgid "Added toolbars for both Signal and Image ROI editors, to allow to zoom in and out, and to reset the zoom level easily"
+msgstr "Ajout de barres d'outils pour les éditeurs de ROI Signal et Image, pour permettre de zoomer et dézoomer, et de réinitialiser facilement le niveau de zoom"
+
+msgid "Rearranged the buttons in the ROI editor dialog box for better ergonomics and consistency with the Annotations editor (\"View in a new window\" dialog box)"
+msgstr "Réorganisation des boutons dans la boîte de dialogue de l'éditeur de ROI pour une meilleure ergonomie et une cohérence avec l'éditeur d'annotations (boîte de dialogue \"Voir dans une nouvelle fenêtre\")"
+
+msgid "Application color theme:"
+msgstr "Application de thème de couleur :"
+
+msgid "Added support for color theme (auto, light, dark) in the \"Settings\" dialog box"
+msgstr "Ajout de la prise en charge du thème de couleur (auto, clair, foncé) dans la boîte de dialogue \"Paramètres\""
+
+msgid "The color theme is applied without restarting the application"
+msgstr "Le thème de couleur est appliqué sans redémarrer l'application"
+
+msgid "Intensity profile / Segment profile extraction:"
+msgstr "Extraction de profil d'intensité / Profil de segment :"
+
+msgid "When extracting a profile on an image with a ROI defined, the associated PlotPy feature show a warning message ('UserWarning: Warning: converting a masked element to nan.') but the profile is correctly extracted and displayed, with NaN values where the ROI is not defined."
+msgstr "Lors de l'extraction d'un profil sur une image avec une ROI définie, la fonction PlotPy associée affiche un message d'avertissement ('UserWarning: Attention : conversion d'un élément masqué en nan.') mais le profil est correctement extrait et affiché, avec des valeurs NaN là où la ROI n'est pas définie."
+
+msgid "NaN values are now removed from the profile before plotting it"
+msgstr "Les valeurs NaN sont maintenant supprimées du profil avant de le tracer"
+
+msgid "Simple processing features with a one-to-on mapping with a Python function (e.g. `numpy.absolute`, `numpy.log10`, etc.) and without parameters: fix result object title which was systematically ending with \"|\" (the character that usually precedes the list of parameters)"
+msgstr "Les fonctionnalités de traitement simples avec une correspondance un-à-un avec une fonction Python (par exemple `numpy.absolute`, `numpy.log10`, etc.) et sans paramètres : correction du titre de l'objet résultat qui se terminait systématiquement par \"|\" (le caractère qui précède généralement la liste des paramètres)"
+
+msgid "Butterworth filter: fix cutoff frequency ratio default value and valid range"
+msgstr "Filtrage de Butterworth : correction de la valeur par défaut et de la plage de valeurs valides de la fréquence de coupure"
+
+msgid "Fix actions refresh issue in Image View vertical toolbar:"
+msgstr "Toutes les actions liées à la visualisation sont désormais regroupées dans la barre d'outils verticale du panneau de visualisation"
+
+msgid "When starting DataLab with the Signal Panel active, switching to the Image View was showing \"View in a new window\" or \"Edit Regions of interest\" actions enabled in the vertical toolbar, even if no image was displayed in the Image View"
+msgstr "Lors du démarrage de DataLab avec le panneau Signal actif, le passage à la Vue Image affichait les actions \"Voir dans une nouvelle fenêtre\" ou \"Modifier les régions d'intérêt\" activées dans la barre d'outils verticale, même si aucune image n'était affichée dans la Vue Image"
+
+msgid "The Image View vertical toolbar is now correctly updated at startup"
+msgstr "La barre d'outils verticale de la Vue Image est maintenant correctement mise à jour au démarrage"
+
+msgid "View in a new window: cross section tools (intensity profiles) stayed disabled unless the user selected an image through the item list - this is now fixed"
+msgstr "Voir dans une nouvelle fenêtre : les outils de coupe transversale (profils d'intensité) restaient désactivés à moins que l'utilisateur ne sélectionne une image via la liste des éléments - c'est maintenant corrigé"
+
+msgid "Image View: \"Show contrast panel\" toolbar button was not enabled at startup, and was only enabled when at least one image was displayed in the Image View - it is now always enabled, as expected"
+msgstr "Vue Image : le bouton de la barre d'outils \"Afficher le panneau de contraste\" n'était pas activé au démarrage, et n'était activé que lorsqu'au moins une image était affichée dans la Vue Image - il est maintenant toujours activé, comme prévu"
+
+msgid "Image data type conversion:"
+msgstr "Conversion du type de données des images :"
+
+msgid "Previously, the data type conversion feature was common to signal and image processing features, i.e. a simple conversion of the data type using NumPy's `astype` method"
+msgstr "Précédemment, la fonction de conversion de type de données était commune aux fonctionnalités de traitement de signal et d'image, c'est-à-dire une simple conversion du type de données en utilisant la méthode `astype` de NumPy"
+
+msgid "This was not sufficient for image processing features, in particular for integer images, because even if the result was correct from a numerical point of view, underflow or overflow could be legitimately seen as a bug from a mathematical point of view"
+msgstr "Cela n'était pas suffisant pour les fonctionnalités de traitement d'image, en particulier pour les images avec des données de type entier, car même si le résultat était correct d'un point de vue numérique, un débordement ou un dépassement pouvait légitimement être considéré comme un bug d'un point de vue mathématique"
+
+msgid "The image data type conversion feature now relies on the internal `clip_astype` function, which clips the data to the valid range of the target data type before converting it (in the case of integer images)"
+msgstr "La fonction de conversion du type de données des images repose désormais sur la fonction interne `clip_astype`, qui recadre les données dans la plage valide du type de données cible avant de les convertir (dans le cas des images de type entier)"
+
+msgid "Image ROI extraction issues:"
+msgstr "Problèmes d'extraction de ROI d'image :"
+
+msgid "Multiple regressions were introduced in version 0.16.0:"
+msgstr "Plusieurs régressions ont été introduites dans la version 0.16.0 :"
+
+msgid "Single circular ROI extraction was not working as expected (a rectangular ROI was extracted, with unexpected coordinates)"
+msgstr "L'extraction d'une seule ROI circulaire ne fonctionnait pas comme prévu (une ROI rectangulaire était extraite, avec des coordonnées inattendues)"
+
+msgid "Multiple circular ROI extraction lead to a rectangular ROI extraction"
+msgstr "L'extraction de plusieurs ROI circulaires conduisait à une extraction de ROI rectangulaire"
+
+msgid "Multiple ROI extraction was no longer cropping the image to the overall bounding box of the ROIs"
+msgstr "L'extraction de plusieurs ROI ne recadrait plus l'image à la boîte englobante globale des ROIs"
+
+msgid "These issues are now fixed, and unit tests have been added to prevent regressions:"
+msgstr "Ces problèmes sont maintenant corrigés, et des tests unitaires ont été ajoutés pour éviter les régressions :"
+
+msgid "An independent test algorithm has been implemented to check the correctness of the ROI extraction in all cases mentioned above"
+msgstr "Un algorithme de test indépendant a été implémenté pour vérifier la correction de l'extraction de ROI dans tous les cas mentionnés ci-dessus"
+
+msgid "Tests cover both single and multiple ROI extraction, with circular and rectangular ROIs"
+msgstr "Les tests couvrent à la fois l'extraction de ROI unique et multiple, avec des ROIs circulaires et rectangulaires"
+
+msgid "Overflow and underflow issues in some operations on integer images:"
+msgstr "Problèmes de débordement et de dépassement dans certaines opérations sur des images de type entier :"
+
+msgid "When processing integer images, some features were causing overflow or underflow issues, leading to unexpected results (correct results from a numerical point of view, but not from a mathematical point of view)"
+msgstr "Lors du traitement d'images de type entier, certaines fonctionnalités provoquaient des problèmes de débordement ou de dépassement, entraînant des résultats inattendus (résultats corrects d'un point de vue numérique, mais pas d'un point de vue mathématique)"
+
+msgid "This issue only concerned basic operations (addition, subtraction, multiplication, division, and constant operations) - all the other features were already working as expected"
+msgstr "Ce problème ne concernait que les opérations de base (addition, soustraction, multiplication, division et opérations constantes) - toutes les autres fonctionnalités fonctionnaient déjà comme prévu"
+
+msgid "This is now fixed as result output are now floating point images"
+msgstr "Cela est maintenant corrigé car les résultats sont désormais des images à virgule flottante."
+
+msgid "Unit tests have been added to prevent regressions for all these operations"
+msgstr "Des tests unitaires ont été ajoutés pour éviter les régressions pour toutes ces opérations"

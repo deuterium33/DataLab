@@ -6,18 +6,11 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: DataLab \n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-16 14:44+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
-"Language-Team: fr <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.17.0\n"
 
 msgid "The `datalab-platform` package requires the following Python modules:"
 msgstr "Le paquet `datalab-platform` nécessite les modules Python suivants :"
@@ -43,7 +36,7 @@ msgstr "Langage de programmation Python"
 msgid "guidata"
 msgstr ""
 
-msgid ">= 3.13.3"
+msgid ">= 3.13.4"
 msgstr ""
 
 msgid "Automatic GUI generation for easy dataset editing and display"
@@ -61,7 +54,7 @@ msgstr "Outils de tracé de courbes et d'images pour les applications Python/Qt"
 msgid "Sigima"
 msgstr ""
 
-msgid ">= 1.0.2"
+msgid ">= 1.1.2"
 msgstr ""
 
 msgid "Scientific computing engine for 1D signals and 2D images, part of the DataLab open-source platform."
@@ -70,7 +63,7 @@ msgstr ""
 msgid "NumPy"
 msgstr ""
 
-msgid ">= 1.22"
+msgid ">= 1.22, < 2.5"
 msgstr ""
 
 msgid "Fundamental package for array computing in Python"
@@ -79,7 +72,7 @@ msgstr "Paquet fondamental pour le calcul sur tableaux en Python"
 msgid "SciPy"
 msgstr ""
 
-msgid ">= 1.10.1"
+msgid ">= 1.10.1, < 1.17"
 msgstr ""
 
 msgid "Fundamental algorithms for scientific computing in Python"
@@ -88,7 +81,7 @@ msgstr "Algorithmes fondamentaux pour le calcul scientifique en Python"
 msgid "scikit-image"
 msgstr ""
 
-msgid ">= 0.19.2"
+msgid ">= 0.19.2, < 0.27"
 msgstr ""
 
 msgid "Image processing in Python"
@@ -97,7 +90,7 @@ msgstr "Traitement d'images en Python"
 msgid "pandas"
 msgstr ""
 
-msgid ">= 1.4"
+msgid ">= 1.4, < 3.1"
 msgstr ""
 
 msgid "Powerful data structures for data analysis, time series, and statistics"
@@ -106,7 +99,7 @@ msgstr "Analyse de données, séries temporelles et statistiques"
 msgid "PyWavelets"
 msgstr ""
 
-msgid ">= 1.2"
+msgid ">= 1.2, < 2.0"
 msgstr ""
 
 msgid "PyWavelets, wavelet transform module"
@@ -128,6 +121,30 @@ msgid ">= 21.3"
 msgstr ""
 
 msgid "Core utilities for Python packages"
+msgstr ""
+
+msgid "fastapi"
+msgstr ""
+
+msgid ">= 0.110.0"
+msgstr ""
+
+msgid "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
+msgstr ""
+
+msgid "uvicorn[standard]"
+msgstr ""
+
+msgid ">= 0.27.0"
+msgstr ""
+
+msgid "pydantic"
+msgstr ""
+
+msgid ">= 2.0"
+msgstr ""
+
+msgid "Data validation using Python type hints"
 msgstr ""
 
 msgid "Optional modules for GUI support (Qt):"
@@ -241,3 +258,8 @@ msgstr ""
 msgid "A pytest plugin to run Xvfb (or Xephyr/Xvnc) for tests."
 msgstr "Un plugin pytest pour exécuter Xvfb (ou Xephyr/Xvnc) pour les tests."
 
+msgid "httpx"
+msgstr ""
+
+msgid "The next generation HTTP client."
+msgstr ""

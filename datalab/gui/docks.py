@@ -213,8 +213,9 @@ def get_more_image_stats(
                 if xunit and zunit:
                     densityfmt += " " + zunit + "/" + xunit + "²"
                 info = info + f"<br>ρ = {densityfmt % density}"
-
-    c_i, c_j = measure.centroid(data)
+    # Convert data (ndarray) to a simple array to compute centroid with the new
+    # einsum optimisation introduce in numpy 2.4.0 and scikit-image 0.26.0
+    c_i, c_j = measure.centroid(np.array(data))
     c_x, c_y = item.get_plot_coordinates(c_j + ix0, c_i + iy0)
     info += "<br>" + "<br>".join(
         [
@@ -439,7 +440,7 @@ class DockablePlotWidget(DockableWidget):
         self.update_color_mode()
         plot = self.plotwidget.get_plot()
         canvas = plot.canvas()
-        canvas.setFrameStyle(canvas.Plain | canvas.NoFrame)
+        canvas.setFrameStyle(QW.QFrame.Plain | QW.QFrame.NoFrame)
         plot.SIG_ITEMS_CHANGED.connect(self.update_watermark)
 
     def update_color_mode(self) -> None:

@@ -11,16 +11,22 @@ DataLab project.
 """
 
 # pylint: disable=invalid-name  # Allows short reference names like x, y, ...
+# This module intentionally concentrates the application shell, menus, panels,
+# status widgets and shutdown logic. A file-length disable is more honest than
+# splitting high-coupling UI code only to satisfy a metric.
+# pylint: disable=too-many-lines
 
 from __future__ import annotations
 
 import abc
 import base64
 import functools
+import logging
 import os
 import os.path as osp
 import sys
 import time
+import traceback
 import webbrowser
 from typing import TYPE_CHECKING
 
@@ -62,6 +68,7 @@ from datalab.gui.actionhandler import ActionCategory
 from datalab.gui.docks import DockablePlotWidget
 from datalab.gui.h5io import H5InputOutput
 from datalab.gui.panel import base, image, macro, signal
+from datalab.gui.pluginconfig import PluginConfigDialog
 from datalab.gui.settings import edit_settings
 from datalab.objectmodel import ObjectGroup
 from datalab.plugins import PluginRegistry, discover_plugins, discover_v020_plugins
@@ -71,6 +78,8 @@ from datalab.utils.qthelpers import (
     bring_to_front,
     configure_menu_about_to_show,
 )
+from datalab.webapi import WEBAPI_AVAILABLE, get_webapi_controller
+from datalab.webapi.actions import WebApiActions
 from datalab.widgets import instconfviewer, logviewer, status
 from datalab.widgets.warningerror import go_to_error
 
@@ -109,7 +118,11 @@ class DLMainWindowMeta(type(QW.QMainWindow), abc.ABCMeta):
     """Mixed metaclass to avoid conflicts"""
 
 
-class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta):
+# DLMainWindow is the top-level UI shell, so it legitimately owns many widget
+# references and public control methods used by the rest of the application.
+class DLMainWindow(  # pylint: disable=too-many-instance-attributes,too-many-public-methods
+    QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
+):
     """DataLab main window
 
     Args:
@@ -131,7 +144,9 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             return DLMainWindow(console, hide_on_close)
         return DLMainWindow.__instance
 
-    def __init__(self, console=None, hide_on_close=False):
+    # Startup wiring is intentionally kept linear here because it assembles the
+    # full application object graph and side effects in a predictable order.
+    def __init__(self, console=None, hide_on_close=False):  # pylint: disable=too-many-statements
         """Initialize main window"""
         DLMainWindow.__instance = self
         super().__init__()
@@ -146,9 +161,12 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         self.__old_size: tuple[int, int] | None = None
         self.__memory_warning = False
         self.memorystatus: status.MemoryStatus | None = None
+        self.webapistatus: status.WebAPIStatus | None = None
+        self.pluginstatus: status.PluginStatus | None = None
 
         self.consolestatus: status.ConsoleStatus | None = None
         self.console: DockableConsole | None = None
+        self._startup_errors: list[str] = []
         self.macropanel: MacroPanel | None = None
 
         self.main_toolbar: QW.QToolBar | None = None
@@ -162,6 +180,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         self.tabmenu: QW.QMenu | None = None
         self.docks: dict[AbstractPanel | DockableConsole, QW.QDockWidget] | None = None
         self.h5inputoutput = H5InputOutput(self)
+        self.webapi_actions: WebApiActions | None = None
 
         self.openh5_action: QW.QAction | None = None
         self.saveh5_action: QW.QAction | None = None
@@ -171,6 +190,8 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         self.autorefresh_action: QW.QAction | None = None
         self.showfirstonly_action: QW.QAction | None = None
         self.showlabel_action: QW.QAction | None = None
+        self.reload_plugins_action: QW.QAction | None = None
+        self.configure_plugins_action: QW.QAction | None = None
 
         self.file_menu: QW.QMenu | None = None
         self.create_menu: QW.QMenu | None = None
@@ -449,6 +470,116 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         panel.delete_metadata(refresh_plot, keep_roi)
 
     @remote_controlled
+    def call_method(
+        self,
+        method_name: str,
+        *args,
+        panel: Literal["signal", "image"] | None = None,
+        **kwargs,
+    ):
+        """Call a public method on a panel or main window.
+
+        This generic method allows calling any public method that is not explicitly
+        exposed in the proxy API. The method resolution follows this order:
+
+        1. If panel is specified: call method on that specific panel
+        2. If panel is None:
+           a. Try to call method on main window (DLMainWindow)
+           b. If not found, try to call method on current panel (BaseDataPanel)
+
+        This makes it convenient to call panel methods without specifying the panel
+        parameter when working on the current panel.
+
+        Args:
+            method_name: Name of the method to call
+            *args: Positional arguments to pass to the method
+            panel: Panel name ("signal", "image", or None for auto-detection).
+             Defaults to None.
+            **kwargs: Keyword arguments to pass to the method
+
+        Returns:
+            The return value of the called method
+
+        Raises:
+            AttributeError: If the method does not exist or is not public
+            ValueError: If the panel name is invalid
+
+        Examples:
+            >>> # Call remove_object on current panel (auto-detected)
+            >>> win.call_method("remove_object", force=True)
+            >>> # Call a signal panel method specifically
+            >>> win.call_method("delete_all_objects", panel="signal")
+            >>> # Call main window method
+            >>> win.call_method("get_current_panel")
+        """
+        # Security check: only allow public methods (not starting with _)
+        if method_name.startswith("_"):
+            raise AttributeError(
+                f"Cannot call private method '{method_name}' through proxy"
+            )
+
+        # If panel is specified, use that panel directly
+        if panel is not None:
+            target = self.__get_datapanel(panel)
+            if not hasattr(target, method_name):
+                raise AttributeError(
+                    f"Method '{method_name}' does not exist on {panel} panel"
+                )
+            method = getattr(target, method_name)
+            if not callable(method):
+                raise AttributeError(f"'{method_name}' is not a callable method")
+            return method(*args, **kwargs)
+
+        # Panel is None: try main window first, then current panel
+        # Try main window first
+        if hasattr(self, method_name):
+            method = getattr(self, method_name)
+            if callable(method):
+                return method(*args, **kwargs)
+
+        # Method not found on main window, try current panel
+        current_panel = self.__get_current_basedatapanel()
+        if hasattr(current_panel, method_name):
+            method = getattr(current_panel, method_name)
+            if callable(method):
+                return method(*args, **kwargs)
+
+        # Method not found anywhere
+        raise AttributeError(
+            f"Method '{method_name}' does not exist on main window or current panel"
+        )
+
+    @remote_controlled
+    def call_method_slot(
+        self,
+        method_name: str,
+        args: list,
+        panel: Literal["signal", "image"] | None,
+        kwargs: dict,
+    ) -> None:
+        """Slot to call a method from RemoteServer thread in GUI thread.
+
+        This slot receives signals from RemoteServer and executes the method in
+        the GUI thread, avoiding thread-safety issues with Qt widgets and dialogs.
+
+        Args:
+            method_name: Name of the method to call
+            args: Positional arguments as a list
+            panel: Panel name or None for auto-detection
+            kwargs: Keyword arguments as a dict
+        """
+        # Call the method and store result in RemoteServer
+        try:
+            result = self.call_method(method_name, *args, panel=panel, **kwargs)
+            # Store result in RemoteServer for retrieval by XML-RPC thread
+            self.remote_server.result = result
+            self.remote_server.exception = None  # Clear any previous exception
+        except Exception as exc:  # pylint: disable=broad-except
+            # Store exception for re-raising in XML-RPC thread
+            self.remote_server.result = None
+            self.remote_server.exception = exc
+
+    @remote_controlled
     def get_object_shapes(
         self,
         nb_id_title: int | str | None = None,
@@ -526,6 +657,60 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         """
         self.macropanel.import_macro_from_file(filename)
 
+    # ------WebAPI control
+    @remote_controlled
+    def start_webapi_server(
+        self,
+        host: str | None = None,
+        port: int | None = None,
+    ) -> dict:
+        """Start the Web API server.
+
+        Args:
+            host: Host address to bind to. Defaults to "127.0.0.1".
+            port: Port number. Defaults to auto-detect available port.
+
+        Returns:
+            Dictionary with "url" and "token" keys.
+
+        Raises:
+            RuntimeError: If Web API deps not installed or server already running.
+        """
+        if not WEBAPI_AVAILABLE:
+            raise RuntimeError(
+                "Web API dependencies not installed. "
+                "Install with: pip install datalab-platform[webapi]"
+            )
+
+        controller = get_webapi_controller()
+        controller.set_main_window(self)
+        url, token = controller.start(host=host, port=port)
+        return {"url": url, "token": token}
+
+    @remote_controlled
+    def stop_webapi_server(self) -> None:
+        """Stop the Web API server."""
+        if not WEBAPI_AVAILABLE:
+            return
+
+        controller = get_webapi_controller()
+        controller.stop()
+
+    @remote_controlled
+    def get_webapi_status(self) -> dict:
+        """Get Web API server status.
+
+        Returns:
+            Dictionary with "running", "url", and "token" keys.
+        """
+        if not WEBAPI_AVAILABLE:
+            return {"running": False, "url": None, "token": None, "available": False}
+
+        controller = get_webapi_controller()
+        info = controller.get_connection_info()
+        info["available"] = True
+        return info
+
     # ------Misc.
     @property
     def panels(self) -> tuple[AbstractPanel, ...]:
@@ -539,6 +724,16 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
     def __set_low_memory_state(self, state: bool) -> None:
         """Set memory warning state"""
         self.__memory_warning = state
+
+    def __show_webapi_info(self) -> None:
+        """Show Web API connection info when status widget is clicked."""
+        if self.webapi_actions is not None:
+            self.webapi_actions.show_connection_info()
+
+    def __start_webapi_server(self) -> None:
+        """Start Web API server when status widget is clicked."""
+        if self.webapi_actions is not None:
+            self.webapi_actions.start_server_from_status_widget()
 
     def confirm_memory_state(self) -> bool:  # pragma: no cover
         """Check memory warning state and eventually show a warning dialog
@@ -600,6 +795,10 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             # Showing the log viewer for testing purpose (unattended mode) but only
             # if option 'do_not_quit' is not set, to avoid blocking the test suite
             self.__show_logviewer()
+        elif execenv.do_not_quit:
+            # If 'do_not_quit' is set, we do not show any message box to avoid blocking
+            # the test suite
+            return
         elif Conf.main.faulthandler_log_available.get(
             False
         ) or Conf.main.traceback_log_available.get(False):
@@ -677,6 +876,12 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         if tour:
             Conf.main.tour_enabled.set(False)
             self.show_tour()
+        # Auto-start WebAPI server if environment variable is set
+        if os.environ.get("DATALAB_WEBAPI_ENABLED") == "1":
+            try:
+                self.start_webapi_server()
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print(f"Warning: Failed to auto-start WebAPI server: {e}")
 
     def take_screenshot(self, name: str) -> None:  # pragma: no cover
         """Take main window screenshot"""
@@ -788,30 +993,111 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         self.__create_plugins_actions()
         self.__setup_central_widget()
         self.__add_menus()
+        self.__setup_webapi()
         if console:
             self.__setup_console()
+            self.__flush_startup_errors()
         self.__update_actions(update_other_data_panel=True)
         self.__add_macro_panel()
         self.__configure_panels()
         # Now that everything is set up, we can restore the window state:
         self.__restore_state()
 
+    def __setup_webapi(self) -> None:
+        """Setup Web API actions."""
+        self.webapi_actions = WebApiActions(self)
+        # Note: Menu is added in __update_view_menu since view_menu is cleared each show
+
     def __register_plugins(self) -> None:
-        """Register plugins"""
+        """Discover and register third-party plugins at startup
+
+        The discovery phase imports all modules following the plugin
+        naming convention. Plugin classes are then provided by
+        :class:`PluginRegistry` and instantiated/registered here.
+
+        Errors are captured per-plugin so that one failing plugin does not
+        prevent the others from loading.  Because this method runs before
+        the internal console is available, error tracebacks are buffered
+        in ``_startup_errors`` and replayed to the console later (see
+        :meth:`setup`).
+        """
+        # Clear plugin class registry to avoid duplicate registration
+        # when reloading modules or running tests
+        PluginRegistry.clear_plugin_classes()
+
         with qth.try_or_log_error("Discovering plugins"):
             # Discovering plugins
             plugin_nb = len(discover_plugins())
             execenv.log(self, f"{plugin_nb} plugin(s) found")
+
+        # Buffer any import errors that occurred during discovery
+        self._startup_errors.extend(PluginRegistry.get_discovery_errors())
+
+        # Get enabled plugins list from configuration
+        # None = all plugins enabled (default), [] = no plugins, list = specific plugins
+        enabled_list = Conf.main.plugins_enabled_list.get(None)
+
         for plugin_class in PluginRegistry.get_plugin_classes():
-            with qth.try_or_log_error(f"Instantiating plugin {plugin_class.__name__}"):
-                # Instantiating plugin
+            try:
+                # Check if plugin is enabled before instantiation
+                # None means all plugins are enabled
+                if enabled_list is not None:
+                    plugin_name = plugin_class.PLUGIN_INFO.name
+                    if plugin_name not in enabled_list:
+                        execenv.log(
+                            self,
+                            f"Plugin {plugin_name} is disabled, skipping registration",
+                        )
+                        continue
+
+                # Instantiate and register plugin
                 plugin: PluginBase = plugin_class()
-            with qth.try_or_log_error(f"Registering plugin {plugin.info.name}"):
-                # Registering plugin
                 plugin.register(self)
+            # Plugin registration executes third-party code. We intentionally
+            # isolate any exception here so the failure is still reported in the
+            # internal console, log files, and plugin configuration dialog.
+            except Exception:  # pylint: disable=broad-except
+                if qth.is_running_tests():
+                    raise
+                # Log to file (same mechanism as try_or_log_error)
+                tb_text = traceback.format_exc()
+                traceback.print_exc()
+                logger = logging.getLogger(__name__)
+                logger.error(
+                    "Error in Instantiating and registering plugin %s",
+                    plugin_class.__name__,
+                    exc_info=True,
+                )
+                Conf.main.traceback_log_available.set(True)
+                # Buffer for replay in console once it is ready
+                self._startup_errors.append(tb_text)
+                # Record structured info about the failed plugin
+                mod = sys.modules.get(plugin_class.__module__)
+                filepath = getattr(mod, "__file__", "") if mod else ""
+                PluginRegistry.add_failed_plugin(
+                    plugin_class.__name__, filepath or "", tb_text
+                )
+
+    def __flush_startup_errors(self) -> None:
+        """Write any buffered startup errors to the internal console.
+
+        Called right after :meth:`__setup_console` so that plugin-import
+        tracebacks captured during :meth:`__register_plugins` become
+        visible to the user in the console widget.
+        """
+        if self.console is None or not self._startup_errors:
+            return
+        for tb_text in self._startup_errors:
+            self.console.write_error(tb_text)
+        self._startup_errors.clear()
 
     def __create_plugins_actions(self) -> None:
-        """Create plugins actions"""
+        """Ask each registered plugin to create its UI actions
+
+        Actions created while the PLUGINS category is active are stored
+        in the panels' action handlers and later exposed through the
+        *Plugins* menu.
+        """
         with self.signalpanel.acthandler.new_category(ActionCategory.PLUGINS):
             with self.imagepanel.acthandler.new_category(ActionCategory.PLUGINS):
                 for plugin in PluginRegistry.get_plugins():
@@ -820,9 +1106,106 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
 
     @staticmethod
     def __unregister_plugins() -> None:
-        """Unregister plugins"""
+        """Unregister all plugins and let them cleanup their hooks"""
         with qth.try_or_log_error("Unregistering plugins"):
             PluginRegistry.unregister_all_plugins()
+
+    def __configure_plugins(self) -> None:
+        """Open plugin configuration dialog"""
+        dialog = PluginConfigDialog(self)
+        dialog.exec()
+
+    def reload_plugins(self) -> None:
+        """Reload third-party plugins at runtime.
+
+        This unregisters active plugins, clears plugin actions from both panels,
+        re-discovers plugin modules (reloading code changes from disk),
+        re-registers enabled plugins, then recreates plugin actions and refreshes
+        menus.
+        """
+        with qth.try_or_log_error("Reloading plugins"):
+            if not Conf.main.plugins_enabled.get():
+                QW.QMessageBox.information(
+                    self,
+                    _("Plugins"),
+                    _(
+                        "Third-party plugins are disabled. Enable them in the "
+                        "Settings dialog to use this feature."
+                    ),
+                )
+                return
+
+            # Unregister existing plugin instances
+            self.__unregister_plugins()
+
+            # Clear existing plugin actions on both panels so that
+            # removed plugins no longer appear in menus.
+            for panel in (self.signalpanel, self.imagepanel):
+                panel.acthandler.clear_plugin_actions()
+
+            # Reset plugin class registry and rediscover plugins. The
+            # discovery step will reload already-imported modules so
+            # that code changes are picked up.
+            PluginRegistry.clear_plugin_classes()
+            with qth.try_or_log_error("Discovering plugins (reload)"):
+                plugin_nb = len(discover_plugins())
+                execenv.log(self, f"{plugin_nb} plugin(s) found (reloaded)")
+
+            # Get enabled plugins list from configuration
+            # None = all enabled (default), [] = none, list = specific plugins
+            enabled_list = Conf.main.plugins_enabled_list.get(None)
+
+            # Instantiate and register plugins again
+            for plugin_class in PluginRegistry.get_plugin_classes():
+                try:
+                    # Check if plugin is enabled before instantiation
+                    # None means all plugins are enabled
+                    if enabled_list is not None:
+                        plugin_name = plugin_class.PLUGIN_INFO.name
+                        if plugin_name not in enabled_list:
+                            execenv.log(
+                                self,
+                                f"Plugin {plugin_name} is disabled, "
+                                "skipping registration (reload)",
+                            )
+                            continue
+
+                    plugin: PluginBase = plugin_class()
+                    plugin.register(self)
+                # Plugin registration executes third-party code. We intentionally
+                # isolate any exception here so the failure is still reported in the
+                # internal console, log files, and plugin configuration dialog.
+                except Exception:  # pylint: disable=broad-except
+                    if qth.is_running_tests():
+                        raise
+                    context = (
+                        f"Instantiating and registering plugin "
+                        f"{plugin_class.__name__} (reload)"
+                    )
+                    tb_text = traceback.format_exc()
+                    traceback.print_exc()
+                    logger = logging.getLogger(__name__)
+                    logger.error("Error in %s", context, exc_info=True)
+                    Conf.main.traceback_log_available.set(True)
+                    # Write error to console (available during reload)
+                    if self.console is not None:
+                        self.console.write_error(tb_text)
+                    # Record structured info about the failed plugin
+                    mod = sys.modules.get(plugin_class.__module__)
+                    filepath = getattr(mod, "__file__", "") if mod else ""
+                    PluginRegistry.add_failed_plugin(
+                        plugin_class.__name__, filepath or "", tb_text
+                    )
+
+            # Recreate plugin actions for the new plugin set
+            self.__create_plugins_actions()
+
+            # Update actions and menus to reflect new plugin set
+            self.__update_actions(update_other_data_panel=True)
+
+            # Update plugin status in the status bar
+            self.pluginstatus.update_status()
+            self.__update_plugins_availability()
 
     def __configure_statusbar(self, console: bool) -> None:
         """Configure status bar
@@ -836,17 +1219,57 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             self.consolestatus = status.ConsoleStatus()
             self.statusBar().addPermanentWidget(self.consolestatus)
         # Plugin status
-        pluginstatus = status.PluginStatus()
-        self.statusBar().addPermanentWidget(pluginstatus)
+        self.pluginstatus = status.PluginStatus()
+        self.statusBar().addPermanentWidget(self.pluginstatus)
         # XML-RPC server status
         xmlrpcstatus = status.XMLRPCStatus()
         xmlrpcstatus.set_port(self.remote_server.port)
         self.statusBar().addPermanentWidget(xmlrpcstatus)
+        # Web API server status
+        self.webapistatus = status.WebAPIStatus()
+        self.webapistatus.SIG_SHOW_INFO.connect(self.__show_webapi_info)
+        self.webapistatus.SIG_START_SERVER.connect(self.__start_webapi_server)
+        self.statusBar().addPermanentWidget(self.webapistatus)
         # Memory status
         threshold = Conf.main.available_memory_threshold.get()
         self.memorystatus = status.MemoryStatus(threshold)
         self.memorystatus.SIG_MEMORY_ALARM.connect(self.__set_low_memory_state)
         self.statusBar().addPermanentWidget(self.memorystatus)
+        self.__update_plugins_availability()
+
+    def __update_plugins_availability(self) -> None:
+        """Update plugin-related UI according to third-party plugin setting."""
+        plugins_enabled = Conf.main.plugins_enabled.get()
+
+        if self.plugins_menu is not None:
+            self.plugins_menu.setEnabled(plugins_enabled)
+
+        for action in (self.reload_plugins_action, self.configure_plugins_action):
+            if action is not None:
+                action.setEnabled(plugins_enabled)
+
+        if hasattr(self, "pluginstatus") and self.pluginstatus is not None:
+            self.pluginstatus.update_status()
+
+    def __apply_plugins_enabled_setting(self) -> None:
+        """Apply third-party plugin enablement without manual user intervention."""
+        plugins_enabled = Conf.main.plugins_enabled.get()
+
+        if plugins_enabled:
+            self.reload_plugins()
+            return
+
+        self.__unregister_plugins()
+        for panel in (self.signalpanel, self.imagepanel):
+            panel.acthandler.clear_plugin_actions()
+
+        PluginRegistry.clear_plugin_classes()
+        PluginRegistry.clear_failed_plugins()
+        PluginRegistry.clear_discovery_errors()
+        self._startup_errors.clear()
+
+        self.__update_actions(update_other_data_panel=True)
+        self.__update_plugins_availability()
 
     def __add_toolbar(
         self, title: str, position: Literal["top", "bottom", "left", "right"], name: str
@@ -946,6 +1369,23 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             tip=_("Show or hide ROI and other graphical object titles or subtitles"),
             toggled=self.toggle_show_titles,
         )
+
+        # Plugins menu actions
+        self.reload_plugins_action = create_action(
+            self,
+            _("Reload plugins"),
+            icon=get_icon("refresh-auto.svg"),
+            tip=_("Reload third-party plugins from disk"),
+            triggered=self.reload_plugins,
+        )
+        self.configure_plugins_action = create_action(
+            self,
+            _("Configure plugins..."),
+            icon=get_icon("libre-gui-settings.svg"),
+            tip=_("Enable or disable plugins"),
+            triggered=self.__configure_plugins,
+        )
+        self.__update_plugins_availability()
 
     def __add_signal_panel(self) -> None:
         """Setup signal toolbar, widgets and panel"""
@@ -1070,6 +1510,8 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         self.processing_menu = self.menuBar().addMenu(_("Processing"))
         self.analysis_menu = self.menuBar().addMenu(_("Analysis"))
         self.plugins_menu = self.menuBar().addMenu(_("Plugins"))
+        # Make plugins menu scrollable to handle many plugins without overflow
+        self.plugins_menu.setStyleSheet("QMenu { menu-scrollable: 1; }")
         self.view_menu = self.menuBar().addMenu(_("&View"))
         configure_menu_about_to_show(self.view_menu, self.__update_view_menu)
         self.help_menu = self.menuBar().addMenu("?")
@@ -1304,7 +1746,9 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             raise ValueError(f"Unknown panel {panel}")
 
     @remote_controlled
-    def calc(self, name: str, param: gds.DataSet | None = None) -> None:
+    def calc(
+        self, name: str, param: gds.DataSet | None = None, edit: bool = True
+    ) -> None:
         """Call computation feature ``name``
 
         .. note::
@@ -1317,6 +1761,8 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         Args:
             name: Compute function name
             param: Compute function parameter. Defaults to None.
+            edit: Whether to show parameter edit dialog. Defaults to True.
+             Set to False when calling from remote/API to avoid blocking dialogs.
 
         Raises:
             ValueError: unknown function
@@ -1340,7 +1786,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
                 # registered feature:
                 try:
                     feature = panel.processor.get_feature(name)
-                    panel.processor.run_feature(feature, param)
+                    panel.processor.run_feature(feature, param, edit=edit)
                     return
                 except ValueError:
                     continue
@@ -1359,6 +1805,10 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         if not datalab.__version__.replace(".", "").isdigit():
             title += f" [{datalab.__version__}]"
         self.setWindowTitle(title)
+
+    def is_modified(self) -> bool:
+        """Return True if mainwindow is modified"""
+        return self.__is_modified
 
     def __add_dockwidget(self, child, title: str) -> QW.QDockWidget:
         """Add QDockWidget and toggleViewAction"""
@@ -1390,8 +1840,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         self.signalpanel_toolbar.setVisible(is_signal)
         self.imagepanel_toolbar.setVisible(not is_signal)
         if self.plugins_menu is not None:
-            plugin_actions = panel.get_category_actions(ActionCategory.PLUGINS)
-            self.plugins_menu.setEnabled(len(plugin_actions) > 0)
+            self.plugins_menu.setEnabled(Conf.main.plugins_enabled.get())
 
     def __tab_index_changed(self, index: int) -> None:
         """Switch from signal to image mode, or vice-versa"""
@@ -1417,6 +1866,16 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             self.plugins_menu: ActionCategory.PLUGINS,
         }[menu]
         actions = panel.get_category_actions(category)
+        # Always expose the reload action in the Plugins menu, even if
+        # no plugin has registered actions yet (so that new plugins can be
+        # discovered after they are added on disk).
+        if menu is self.plugins_menu:
+            if Conf.main.plugins_enabled.get():
+                actions = list(actions) + [
+                    None,
+                    self.configure_plugins_action,
+                    self.reload_plugins_action,
+                ]
         add_actions(menu, actions)
 
     def __update_file_menu(self) -> None:
@@ -1434,6 +1893,10 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
                 self.settings_action,
             ],
         )
+        # Add Web API submenu
+        if self.webapi_actions is not None:
+            self.file_menu.addSeparator()
+            self.webapi_actions.create_menu(self.file_menu)
         if self.quit_action is not None:
             add_actions(self.file_menu, [self.quit_action])
 
@@ -1527,6 +1990,16 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             if panel is not None:
                 panel.remove_all_objects()
 
+    @remote_controlled
+    def remove_object(self, force: bool = False) -> None:
+        """Remove current object from current panel.
+
+        Args:
+            force: if True, remove object without confirmation. Defaults to False.
+        """
+        panel = self.__get_current_basedatapanel()
+        panel.remove_object(force)
+
     @staticmethod
     def __check_h5file(filename: str, operation: str) -> str:
         """Check HDF5 filename"""
@@ -1559,9 +2032,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             if not filename:
                 return
         with qth.qt_try_loadsave_file(self, filename, "save"):
-            filename = self.__check_h5file(filename, "save")
-            self.h5inputoutput.save_file(filename)
-            self.set_modified(False)
+            self.save_h5_workspace(filename)
 
     @remote_controlled
     def open_h5_files(
@@ -1617,6 +2088,8 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
                     )
                     if answer == QW.QMessageBox.Yes:
                         reset_all = True
+                    elif answer == QW.QMessageBox.No:
+                        reset_all = False
                     elif answer == QW.QMessageBox.Ignore:
                         Conf.io.h5_clear_workspace_ask.set(False)
         if h5files is None:
@@ -1664,6 +2137,59 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         for filename in filenames:
             self.__check_h5file(filename, "load")
         self.h5inputoutput.import_files(filenames, False, reset_all)
+
+    @remote_controlled
+    def load_h5_workspace(self, h5files: list[str], reset_all: bool = False) -> None:
+        """Load native DataLab HDF5 workspace files without any GUI elements.
+
+        This method can be safely called from the internal console as it does not
+        create any Qt widgets, dialogs, or progress bars. It is designed for
+        programmatic use when loading DataLab workspace files.
+
+        .. warning::
+
+            This method only supports native DataLab HDF5 files. For importing
+            arbitrary HDF5 files (non-native), use the GUI menu or macros with
+            :class:`datalab.control.proxy.RemoteProxy`.
+
+        Args:
+            h5files: List of native DataLab HDF5 filenames
+            reset_all: Reset all application data before importing. Defaults to False.
+
+        Raises:
+            ValueError: If a file is not a valid native DataLab HDF5 file
+        """
+        for idx, filename in enumerate(h5files):
+            filename = self.__check_h5file(filename, "load")
+            success = self.h5inputoutput.open_file_headless(
+                filename, reset_all=(reset_all and idx == 0)
+            )
+            if not success:
+                raise ValueError(
+                    f"File '{filename}' is not a native DataLab HDF5 file. "
+                    f"Use the GUI menu or a macro with RemoteProxy to import "
+                    f"arbitrary HDF5 files."
+                )
+        # Refresh panel trees after loading
+        self.repopulate_panel_trees()
+
+    @remote_controlled
+    def save_h5_workspace(self, filename: str) -> None:
+        """Save current workspace to a native DataLab HDF5 file without GUI elements.
+
+        This method can be safely called from the internal console as it does not
+        create any Qt widgets, dialogs, or progress bars. It is designed for
+        programmatic use when saving DataLab workspace files.
+
+        Args:
+            filename: HDF5 filename to save to
+
+        Raises:
+            IOError: If file cannot be saved
+        """
+        filename = self.__check_h5file(filename, "save")
+        self.h5inputoutput.save_file(filename)
+        self.set_modified(False)
 
     @remote_controlled
     def import_h5_file(self, filename: str, reset_all: bool | None = None) -> None:
@@ -1778,7 +2304,9 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         self.add_object(obj, group_id, set_current)
         return True
 
-    def add_image(
+    # This API mirrors the image metadata accepted by create_image, so the
+    # argument count is part of the stable public interface rather than noise.
+    def add_image(  # pylint: disable=too-many-arguments
         self,
         title: str,
         data: np.ndarray,
@@ -1790,7 +2318,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         zlabel: str = "",
         group_id: str = "",
         set_current: bool = True,
-    ) -> bool:  # pylint: disable=too-many-arguments
+    ) -> bool:
         """Add image data to DataLab.
 
         Args:
@@ -1881,7 +2409,9 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         # Allow Qt to refresh the window:
         self.setUpdatesEnabled(True)
 
-    def __edit_settings(self) -> None:
+    # Settings changes are intentionally dispatched in one place because each
+    # option may trigger a specific live UI update or panel refresh.
+    def __edit_settings(self) -> None:  # pylint: disable=too-many-branches,too-many-statements
         """Edit settings"""
         changed_options = edit_settings(self)
         sigima_options.fft_shift_enabled.set(Conf.proc.fft_shift_enabled.get())
@@ -1933,6 +2463,8 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
                 self.__update_color_mode()
             if option == "show_console_on_error":
                 self.__update_console_show_mode()
+            if option == "plugins_enabled":
+                self.__apply_plugins_enabled_setting()
             if option == "plot_toolbar_position":
                 for dock in self.docks.values():
                     widget = dock.widget()
@@ -2025,7 +2557,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
         Returns:
             True if closed properly, False otherwise
         """
-        if not env.execenv.unattended and self.__is_modified:
+        if not env.execenv.unattended and self.is_modified():
             answer = QW.QMessageBox.warning(
                 self,
                 _("Quit"),
@@ -2037,7 +2569,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             )
             if answer == QW.QMessageBox.Yes:
                 self.save_to_h5_file()
-                if self.__is_modified:
+                if self.is_modified():
                     return False
             elif answer == QW.QMessageBox.Cancel:
                 return False
@@ -2049,7 +2581,7 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
             try:
                 self.console.close()
             except RuntimeError:
-                # TODO: [P3] Investigate further why the following error occurs when
+                # Note: investigate further why the following error occurs when
                 # restarting the mainwindow (this is *not* a production case):
                 # "RuntimeError: wrapped C/C++ object of type DockableConsole
                 #  has been deleted".
@@ -2058,12 +2590,15 @@ class DLMainWindow(QW.QMainWindow, AbstractDLControl, metaclass=DLMainWindowMeta
                 # it would represent too much effort for an error occuring in test
                 # configurations only.
                 pass
+        if self.webapi_actions is not None:
+            self.webapi_actions.cleanup()
         self.reset_all()
         self.__save_pos_size_and_state()
         self.__unregister_plugins()
 
         # Saving current tab for next session
-        Conf.main.current_tab.set(self.tabwidget.currentIndex())
+        if self.tabwidget is not None:
+            Conf.main.current_tab.set(self.tabwidget.currentIndex())
 
         execenv.log(self, "closed properly")
         return True

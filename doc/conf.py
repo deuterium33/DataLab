@@ -4,7 +4,6 @@
 
 import os
 import os.path as osp
-import shutil
 import sys
 import zipfile
 
@@ -22,42 +21,6 @@ os.environ["DATALAB_DOC"] = "1"
 # Turn off validation of guidata config
 # (documentation build is not the right place for validation)
 gcfg.set_validation_mode(gcfg.ValidationMode.DISABLED)
-
-# -- Copy CHANGELOG.md to doc folder ------------------------
-#
-# Note: An alternative to this could be to create a 'changelog.rst' file
-# containing the following:
-#
-# .. include:: ../../CHANGELOG.md
-#    :parser: myst_parser.sphinx_
-#
-# But, due to the on-the-fly parsing of the markdown file, this alternative approach
-# is not compatible with the internationalization process of the documentation (see
-# https://github.com/DataLab-Platform/DataLab/issues/108). That is why we copy the
-# CHANGELOG.md file to the doc/contributing folder and remove it after the build.
-
-
-def copy_changelog(app):
-    """Copy CHANGELOG.md to doc/contributing folder."""
-    docpath = osp.abspath(osp.dirname(__file__))
-    dest_fname = osp.join(docpath, "changelog.md")
-    if osp.exists(dest_fname):
-        os.remove(dest_fname)
-    shutil.copyfile(osp.join(docpath, "..", "CHANGELOG.md"), dest_fname)
-    app.env.temp_changelog_path = dest_fname
-
-
-def cleanup_changelog(app, exception):
-    """Remove CHANGELOG.md from doc/contributing folder."""
-    try:
-        path = getattr(app.env, "temp_changelog_path", None)
-        if path and osp.exists(path):
-            os.remove(path)
-    except Exception as exc:
-        print(f"Warning: failed to remove {path}: {exc}")
-    finally:
-        if hasattr(app.env, "temp_changelog_path"):
-            del app.env.temp_changelog_path
 
 
 def compress_tutorials_data(app):
@@ -96,9 +59,7 @@ def compress_tutorials_data(app):
 
 def setup(app):
     """Setup function for Sphinx."""
-    app.connect("builder-inited", copy_changelog)
     app.connect("builder-inited", compress_tutorials_data)
-    app.connect("build-finished", cleanup_changelog)
 
     # Exclude outreach directory from LaTeX/PDF builds
     def exclude_outreach_from_latex(app):
@@ -187,9 +148,9 @@ html_favicon = "_static/favicon.ico"
 html_show_sourcelink = False
 templates_path = ["_templates"]
 if "language=fr" in sys.argv:
-    ann = "DataLab a été présenté à <a href='https://cfp.scipy.org/2024/talk/G3MC9L/'>SciPy 2024</a> 🐍, <a href='https://pretalx.com/pydata-paris-2024/talk/WTDVCC/'>PyData Paris 2024</a> et <a href='https://www.youtube.com/watch?v=lBEu-DeHyz0&list=PLJjbbmRgu6RqGMOhahm2iE6NUkIYIaEDK'>OSXP 2024</a> ! Un cas d'usage avancé sera présenté à <a href='https://datalab-platform.com/fr/outreach/osxp2025.html'>OSXP 2025</a> 🚀 — <a href='https://datalab-platform.com/fr/outreach/index.html'>En savoir plus</a>"  # noqa: E501
+    ann = "DataLab a été présenté à <a href='https://cfp.scipy.org/2024/talk/G3MC9L/'>SciPy 2024</a> 🐍, <a href='https://pretalx.com/pydata-paris-2024/talk/WTDVCC/'>PyData Paris 2024</a>, <a href='https://www.youtube.com/watch?v=lBEu-DeHyz0&list=PLJjbbmRgu6RqGMOhahm2iE6NUkIYIaEDK'>OSXP 2024</a> et <a href='https://www.youtube.com/watch?v=0D4ffBJIc5Q&list=PLJjbbmRgu6RoVze2tajiPe3zJB5muBcuC'>OSXP 2025</a> 🚀 — <a href='https://datalab-platform.com/fr/outreach/index.html'>En savoir plus</a>"  # noqa: E501
 else:
-    ann = "DataLab has been presented at <a href='https://cfp.scipy.org/2024/talk/G3MC9L/'>SciPy 2024</a> 🐍, <a href='https://pretalx.com/pydata-paris-2024/talk/WTDVCC/'>PyData Paris 2024</a>, and <a href='https://www.opensource-experience.com/'>OSXP 2024</a>! An advanced use case will be presented at <a href='https://datalab-platform.com/en/outreach/osxp2025.html'>OSXP 2025</a> 🚀 — <a href='https://datalab-platform.com/en/outreach/index.html'>Learn more</a>"  # noqa: E501
+    ann = "DataLab has been presented at <a href='https://cfp.scipy.org/2024/talk/G3MC9L/'>SciPy 2024</a> 🐍, <a href='https://pretalx.com/pydata-paris-2024/talk/WTDVCC/'>PyData Paris 2024</a>, <a href='https://www.opensource-experience.com/'>OSXP 2024</a>, and <a href='https://datalab-platform.com/en/outreach/osxp2025.html'>OSXP 2025</a> 🚀 — <a href='https://datalab-platform.com/en/outreach/index.html'>Learn more</a>"  # noqa: E501
 html_theme_options = {
     "show_toc_level": 2,
     "github_url": "https://github.com/DataLab-Platform/DataLab/",

@@ -62,6 +62,7 @@ goto:eof
 :SetPythonPath
     set ORIGINAL_PYTHONPATH=%PYTHONPATH%
     cd %~dp0..
+
     if not defined RELEASE (set RELEASE=0)
     if %RELEASE%==1 (
         set PYTHONPATH=%CD%
@@ -70,6 +71,7 @@ goto:eof
             set %%A
         )
     )
+
     set PYTHONPATH=%PYTHONPATH%;%ORIGINAL_PYTHONPATH%
     goto:eof
 

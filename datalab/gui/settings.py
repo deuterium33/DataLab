@@ -47,6 +47,16 @@ class MainSettings(gds.DataSet):
             "<br>like your own scripts (e.g. from Spyder or Jupyter) or other software."
         ),
     )
+    webapi_localhost_no_token = gds.BoolItem(
+        "",
+        _("Web API localhost bypass"),
+        help=_(
+            "When enabled (default), connections from localhost (127.0.0.1) to the "
+            "<br>Web API do not require authentication. This simplifies notebook "
+            "<br>integration when DataLab-Kernel runs on the same machine."
+            "<br>Disable for stricter security if needed."
+        ),
+    )
     available_memory_threshold = gds.IntItem(
         _("Memory threshold"),
         default=0,
@@ -59,7 +69,10 @@ class MainSettings(gds.DataSet):
     plugins_enabled = gds.BoolItem(
         "",
         _("Third-party plugins"),
-        help=_("Disable third-party plugins at startup"),
+        help=_(
+            "Enable or disable third-party plugins immediately. "
+            "Changes are applied without restarting DataLab"
+        ),
     )
     plugins_path = gds.DirectoryItem(
         _("Plugins path"),
@@ -511,7 +524,6 @@ RESTART_OPTIONS = (
     ("process_isolation_enabled", _("Process isolation enable status")),
     ("rpc_server_enabled", _("RPC server enable status")),
     ("console_enabled", _("Console enable status")),
-    ("plugins_enabled", _("Third-party plugins support")),
     ("plugins_path", _("Third-party plugins path")),
 )
 

@@ -33,17 +33,32 @@ The General settings tab contains main window and general feature settings:
     such as your own scripts running in Spyder, Jupyter, or other software. This allows
     programmatic control of DataLab.
 
+**Web API localhost bypass**
+    When enabled (default), connections from localhost (127.0.0.1) to the Web API do not
+    require authentication. This simplifies notebook integration when DataLab-Kernel runs
+    on the same machine. Disable for stricter security if needed.
+
+    .. note::
+
+        When this option is enabled, any application running on your local machine can
+        access the DataLab Web API without a token. Disable this option if you need
+        stricter security.
+
 **Memory threshold**
     Set a threshold (in MB) below which a warning is displayed before loading new data.
     This helps prevent out-of-memory errors when working with large datasets. Set to 0
     to disable the warning.
 
 **Third-party plugins**
-    Enable or disable third-party plugins at startup.
+    Enable or disable third-party plugins immediately.
+    Changes are applied without restarting DataLab.
+    When disabled, third-party plugins are not discovered or loaded.
 
 **Plugins path**
     Specify the directory path where DataLab should look for third-party plugins.
     DataLab will also discover plugins in your PYTHONPATH.
+    To enable or disable individual plugins, use the ``Plugins > Configure plugins...``
+    menu action. DataLab then proposes reloading plugins automatically.
 
 Processing
 ----------

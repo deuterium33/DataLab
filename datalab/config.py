@@ -135,6 +135,7 @@ class MainSection(conf.Section, metaclass=conf.SectionMeta):
     process_isolation_enabled = conf.Option()
     rpc_server_enabled = conf.Option()
     rpc_server_port = conf.Option()
+    webapi_localhost_no_token = conf.Option()  # Allow localhost without token
     traceback_log_path = conf.ConfigPathOption()
     traceback_log_available = conf.Option()
     faulthandler_enabled = conf.Option()
@@ -148,6 +149,7 @@ class MainSection(conf.Section, metaclass=conf.SectionMeta):
     available_memory_threshold = conf.Option()
     current_tab = conf.Option()
     plugins_enabled = conf.Option()
+    plugins_enabled_list = conf.Option()  # List of enabled plugin names
     plugins_path = conf.Option()
     tour_enabled = conf.Option()
     v020_plugins_warning_ignore = conf.Option()  # True: do not warn, False: warn
@@ -301,6 +303,7 @@ class ViewSection(conf.Section, metaclass=conf.SectionMeta):
     ima_def_interpolation = conf.Option()
     ima_def_alpha = conf.Option()
     ima_def_alpha_function = conf.Option()
+    ima_def_keep_lut_range = conf.Option()
 
     # Annotated shape and marker visualization settings for signals
     sig_shape_param = conf.DataSetOption()
@@ -405,10 +408,16 @@ def initialize():
     Conf.main.color_mode.get("auto")
     Conf.main.process_isolation_enabled.get(True)
     Conf.main.rpc_server_enabled.get(True)
+    Conf.main.webapi_localhost_no_token.get(
+        True
+    )  # Enabled by default (Web API is off by default)
     Conf.main.traceback_log_path.get(f".{APP_NAME}_traceback.log")
     Conf.main.faulthandler_log_path.get(f".{APP_NAME}_faulthandler.log")
     Conf.main.available_memory_threshold.get(500)
     Conf.main.plugins_enabled.get(True)
+    Conf.main.plugins_enabled_list.get(
+        None
+    )  # None = all enabled, [] = none, list = specific
     Conf.main.plugins_path.get(Conf.get_path("plugins"))
     Conf.main.tour_enabled.get(True)
     Conf.main.v020_plugins_warning_ignore.get(False)
@@ -459,6 +468,7 @@ def initialize():
     Conf.view.ima_def_interpolation.get(5)
     Conf.view.ima_def_alpha.get(1.0)
     Conf.view.ima_def_alpha_function.get(LUTAlpha.NONE.value)
+    Conf.view.ima_def_keep_lut_range.get(False)
 
     # Datetime format strings: % must be escaped as %% for ConfigParser
     Conf.view.sig_datetime_format_s.get("%%H:%%M:%%S")
@@ -485,6 +495,11 @@ initialize()
 
 ROI_LINE_COLOR = "#5555ff"
 ROI_SEL_LINE_COLOR = "#9393ff"
+MARKER_LINE_COLOR = "#A11818"
+MARKER_TEXT_COLOR = "#440909"
+
+PLUGIN_OK_COLOR = "#2ecc71"
+PLUGIN_ERROR_COLOR = "#e74c3c"
 
 PLOTPY_DEFAULTS = {
     "plot": {
@@ -506,11 +521,27 @@ PLOTPY_DEFAULTS = {
         "selected_curve_symbol/alpha": 0.3,
         "selected_curve_symbol/size": 5,
         "marker/curve/text/textcolor": "black",
-        "marker/cross/text/textcolor": "black",
+        # Cross marker style (shown when pressing Alt key on plot)
+        "marker/cross/symbol/marker": "Cross",
+        "marker/cross/symbol/edgecolor": MAIN_FG_COLOR,
+        "marker/cross/symbol/facecolor": "#ff0000",
+        "marker/cross/symbol/alpha": 1.0,
+        "marker/cross/symbol/size": 8,
+        "marker/cross/text/font/family": "default",
+        "marker/cross/text/font/size": 8,
+        "marker/cross/text/font/bold": False,
+        "marker/cross/text/font/italic": False,
+        "marker/cross/text/textcolor": "#000000",
+        "marker/cross/text/background_color": "#ffffff",
         "marker/cross/text/background_alpha": 0.7,
+        "marker/cross/line/style": "DashLine",
+        "marker/cross/line/color": MARKER_LINE_COLOR,
+        "marker/cross/line/width": 1.0,
+        "marker/cross/markerstyle": "Cross",
+        "marker/cross/spacing": 7,
         # Cursor line and symbol style
         "marker/cursor/line/style": "SolidLine",
-        "marker/cursor/line/color": "#A11818",
+        "marker/cursor/line/color": MARKER_LINE_COLOR,
         "marker/cursor/line/width": 1.0,
         "marker/cursor/symbol/marker": "NoSymbol",
         "marker/cursor/symbol/size": 11,
@@ -518,41 +549,83 @@ PLOTPY_DEFAULTS = {
         "marker/cursor/symbol/facecolor": "#ff9393",
         "marker/cursor/symbol/alpha": 1.0,
         "marker/cursor/sel_line/style": "SolidLine",
-        "marker/cursor/sel_line/color": "#A11818",
+        "marker/cursor/sel_line/color": MARKER_LINE_COLOR,
         "marker/cursor/sel_line/width": 2.0,
         "marker/cursor/sel_symbol/marker": "NoSymbol",
         "marker/cursor/sel_symbol/size": 11,
         "marker/cursor/sel_symbol/edgecolor": MAIN_BG_COLOR,
-        "marker/cursor/sel_symbol/facecolor": "#A11818",
+        "marker/cursor/sel_symbol/facecolor": MARKER_LINE_COLOR,
         "marker/cursor/sel_symbol/alpha": 0.8,
         "marker/cursor/text/font/size": 9,
         "marker/cursor/text/font/family": "default",
         "marker/cursor/text/font/bold": False,
         "marker/cursor/text/font/italic": False,
-        "marker/cursor/text/textcolor": "#440909",
+        "marker/cursor/text/textcolor": MARKER_TEXT_COLOR,
         "marker/cursor/text/background_color": "#ffffff",
         "marker/cursor/text/background_alpha": 0.7,
         "marker/cursor/sel_text/font/size": 9,
         "marker/cursor/sel_text/font/family": "default",
         "marker/cursor/sel_text/font/bold": False,
         "marker/cursor/sel_text/font/italic": False,
-        "marker/cursor/sel_text/textcolor": "#440909",
+        "marker/cursor/sel_text/textcolor": MARKER_TEXT_COLOR,
         "marker/cursor/sel_text/background_color": "#ffffff",
         "marker/cursor/sel_text/background_alpha": 0.7,
+        # Default annotation text style for segments:
+        "shape/segment/line/style": "SolidLine",
+        "shape/segment/line/color": "#00ff55",
+        "shape/segment/line/width": 1.0,
+        "shape/segment/sel_line/style": "SolidLine",
+        "shape/segment/sel_line/color": "#00ff55",
+        "shape/segment/sel_line/width": 2.0,
+        "shape/segment/fill/style": "NoBrush",
+        "shape/segment/sel_fill/style": "NoBrush",
+        "shape/segment/symbol/marker": "XCross",
+        "shape/segment/symbol/size": 9,
+        "shape/segment/symbol/edgecolor": "#00ff55",
+        "shape/segment/symbol/facecolor": "#00ff55",
+        "shape/segment/symbol/alpha": 1.0,
+        "shape/segment/sel_symbol/marker": "XCross",
+        "shape/segment/sel_symbol/size": 12,
+        "shape/segment/sel_symbol/edgecolor": "#00ff55",
+        "shape/segment/sel_symbol/facecolor": "#00ff55",
+        "shape/segment/sel_symbol/alpha": 0.7,
+        # Default style for drag shapes: (global annotations style)
+        "shape/drag/line/style": "SolidLine",
+        "shape/drag/line/color": "#00ff55",
+        "shape/drag/line/width": 1.0,
+        "shape/drag/fill/style": "SolidPattern",
+        "shape/drag/fill/color": MAIN_BG_COLOR,
+        "shape/drag/fill/alpha": 0.1,
+        "shape/drag/symbol/marker": "Rect",
+        "shape/drag/symbol/size": 3,
+        "shape/drag/symbol/edgecolor": "#00ff55",
+        "shape/drag/symbol/facecolor": "#00ff55",
+        "shape/drag/symbol/alpha": 1.0,
+        "shape/drag/sel_line/style": "SolidLine",
+        "shape/drag/sel_line/color": "#00ff55",
+        "shape/drag/sel_line/width": 2.0,
+        "shape/drag/sel_fill/style": "SolidPattern",
+        "shape/drag/sel_fill/color": MAIN_BG_COLOR,
+        "shape/drag/sel_fill/alpha": 0.1,
+        "shape/drag/sel_symbol/marker": "Rect",
+        "shape/drag/sel_symbol/size": 7,
+        "shape/drag/sel_symbol/edgecolor": "#00ff55",
+        "shape/drag/sel_symbol/facecolor": "#00ff00",
+        "shape/drag/sel_symbol/alpha": 0.7,
     },
     "results": {
         # Annotated shape style for result shapes:
         #   Signals:
         "s/annotation/line/style": "SolidLine",
-        "s/annotation/line/color": MAIN_FG_COLOR,
-        "s/annotation/line/width": 1,
-        "s/annotation/fill/style": "SolidPattern",
+        "s/annotation/line/color": "#00aa00",
+        "s/annotation/line/width": 2,
+        "s/annotation/fill/style": "NoBrush",
         "s/annotation/fill/color": MAIN_BG_COLOR,
         "s/annotation/fill/alpha": 0.1,
         "s/annotation/symbol/marker": "XCross",
         "s/annotation/symbol/size": 7,
-        "s/annotation/symbol/edgecolor": MAIN_FG_COLOR,
-        "s/annotation/symbol/facecolor": MAIN_FG_COLOR,
+        "s/annotation/symbol/edgecolor": "#00aa00",
+        "s/annotation/symbol/facecolor": "#00aa00",
         "s/annotation/symbol/alpha": 1.0,
         "s/annotation/sel_line/style": "DashLine",
         "s/annotation/sel_line/color": "#00ff00",
@@ -591,65 +664,65 @@ PLOTPY_DEFAULTS = {
         # Marker styles for results:
         #   Signals:
         "s/marker/cursor/line/style": "DashLine",
-        "s/marker/cursor/line/color": "#ffff00",
+        "s/marker/cursor/line/color": MARKER_LINE_COLOR,
         "s/marker/cursor/line/width": 1.0,
         "s/marker/cursor/symbol/marker": "Ellipse",
         "s/marker/cursor/symbol/size": 11,
         "s/marker/cursor/symbol/edgecolor": MAIN_BG_COLOR,
-        "s/marker/cursor/symbol/facecolor": "#ffff00",
+        "s/marker/cursor/symbol/facecolor": MARKER_LINE_COLOR,
         "s/marker/cursor/symbol/alpha": 0.7,
         "s/marker/cursor/sel_line/style": "DashLine",
-        "s/marker/cursor/sel_line/color": "#ffff00",
+        "s/marker/cursor/sel_line/color": MARKER_LINE_COLOR,
         "s/marker/cursor/sel_line/width": 2.0,
         "s/marker/cursor/sel_symbol/marker": "Ellipse",
         "s/marker/cursor/sel_symbol/size": 11,
-        "s/marker/cursor/sel_symbol/edgecolor": "#ffff00",
-        "s/marker/cursor/sel_symbol/facecolor": "#ffff00",
+        "s/marker/cursor/sel_symbol/edgecolor": MARKER_LINE_COLOR,
+        "s/marker/cursor/sel_symbol/facecolor": MARKER_LINE_COLOR,
         "s/marker/cursor/sel_symbol/alpha": 0.7,
         "s/marker/cursor/text/font/size": 9,
         "s/marker/cursor/text/font/family": "default",
         "s/marker/cursor/text/font/bold": False,
         "s/marker/cursor/text/font/italic": False,
-        "s/marker/cursor/text/textcolor": "#440909",
+        "s/marker/cursor/text/textcolor": MARKER_TEXT_COLOR,
         "s/marker/cursor/text/background_color": "#ffffff",
         "s/marker/cursor/text/background_alpha": 0.7,
         "s/marker/cursor/sel_text/font/size": 9,
         "s/marker/cursor/sel_text/font/family": "default",
         "s/marker/cursor/sel_text/font/bold": False,
         "s/marker/cursor/sel_text/font/italic": False,
-        "s/marker/cursor/sel_text/textcolor": "#440909",
+        "s/marker/cursor/sel_text/textcolor": MARKER_TEXT_COLOR,
         "s/marker/cursor/sel_text/background_color": "#ffffff",
         "s/marker/cursor/sel_text/background_alpha": 0.7,
         "s/marker/cursor/markerstyle": "Cross",
         #   Images:
         "i/marker/cursor/line/style": "DashLine",
-        "i/marker/cursor/line/color": "#ffff00",
+        "i/marker/cursor/line/color": MARKER_LINE_COLOR,
         "i/marker/cursor/line/width": 1.0,
         "i/marker/cursor/symbol/marker": "Diamond",
         "i/marker/cursor/symbol/size": 11,
-        "i/marker/cursor/symbol/edgecolor": "#ffff00",
-        "i/marker/cursor/symbol/facecolor": "#ffff00",
+        "i/marker/cursor/symbol/edgecolor": MARKER_LINE_COLOR,
+        "i/marker/cursor/symbol/facecolor": MARKER_LINE_COLOR,
         "i/marker/cursor/symbol/alpha": 0.7,
         "i/marker/cursor/sel_line/style": "DashLine",
-        "i/marker/cursor/sel_line/color": "#ffff00",
+        "i/marker/cursor/sel_line/color": MARKER_LINE_COLOR,
         "i/marker/cursor/sel_line/width": 2.0,
         "i/marker/cursor/sel_symbol/marker": "Diamond",
         "i/marker/cursor/sel_symbol/size": 11,
-        "i/marker/cursor/sel_symbol/edgecolor": "#ffff00",
-        "i/marker/cursor/sel_symbol/facecolor": "#ffff00",
+        "i/marker/cursor/sel_symbol/edgecolor": MARKER_LINE_COLOR,
+        "i/marker/cursor/sel_symbol/facecolor": MARKER_LINE_COLOR,
         "i/marker/cursor/sel_symbol/alpha": 0.7,
         "i/marker/cursor/text/font/size": 9,
         "i/marker/cursor/text/font/family": "default",
         "i/marker/cursor/text/font/bold": False,
         "i/marker/cursor/text/font/italic": False,
-        "i/marker/cursor/text/textcolor": "#440909",
+        "i/marker/cursor/text/textcolor": MARKER_TEXT_COLOR,
         "i/marker/cursor/text/background_color": "#ffffff",
         "i/marker/cursor/text/background_alpha": 0.7,
         "i/marker/cursor/sel_text/font/size": 9,
         "i/marker/cursor/sel_text/font/family": "default",
         "i/marker/cursor/sel_text/font/bold": False,
         "i/marker/cursor/sel_text/font/italic": False,
-        "i/marker/cursor/sel_text/textcolor": "#440909",
+        "i/marker/cursor/sel_text/textcolor": MARKER_TEXT_COLOR,
         "i/marker/cursor/sel_text/background_color": "#ffffff",
         "i/marker/cursor/sel_text/background_alpha": 0.7,
         "i/marker/cursor/markerstyle": "Cross",

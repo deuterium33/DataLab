@@ -93,6 +93,7 @@ print("All done!")
         self.set_code(self.MACRO_SAMPLE)
         self.editor.modificationChanged.connect(self.modification_changed)
         self.process = None
+        self.__last_exit_code = None
 
     @property
     def title(self) -> str:
@@ -185,8 +186,20 @@ print("All done!")
         """
         global UNTITLED_NB  # pylint: disable=global-statement
         UNTITLED_NB += 1
-        untitled = _("Untitled")
-        return f"{untitled} {UNTITLED_NB:02d}"
+        return f"macro_{UNTITLED_NB:02d}"
+
+    @staticmethod
+    def set_untitled_number(number: int) -> None:
+        """Set the untitled number counter
+
+        This is useful when loading macros from HDF5 or files to ensure
+        that the next untitled macro has a unique name.
+
+        Args:
+            number: New untitled number
+        """
+        global UNTITLED_NB  # pylint: disable=global-statement
+        UNTITLED_NB = number
 
     def modification_changed(self, state: bool) -> None:
         """Method called when macro's editor modification state changed
@@ -207,8 +220,10 @@ print("All done!")
         Returns:
             Locale str
         """
-        locale_codec = QC.QTextCodec.codecForLocale()
-        return locale_codec.toUnicode(bytearr.data())
+        # Python 3 outputs UTF-8 by default, so we need to decode as UTF-8
+        # instead of using the system locale codec (which might be cp1252 on Windows)
+        utf8_codec = QC.QTextCodec.codecForName(b"UTF-8")
+        return utf8_codec.toUnicode(bytearr.data())
 
     def get_stdout(self) -> str:
         """Return standard output str
@@ -257,9 +272,16 @@ print("All done!")
     def run(self) -> None:
         """Run macro"""
         self.process = QC.QProcess()
-        code = self.get_code().replace('"', "'")
+        code = self.get_code()
         datalab_path = osp.abspath(osp.join(osp.dirname(datalab.__file__), os.pardir))
-        code = f"import sys; sys.path.append(r'{datalab_path}'){os.linesep}{code}"
+        # Reconfigure stdout/stderr to use UTF-8 encoding to avoid UnicodeEncodeError
+        # on Windows with locales that don't support all Unicode characters
+        # (e.g., cp1252)
+        code = (
+            f"import sys; sys.path.append(r'{datalab_path}'); "
+            f"sys.stdout.reconfigure(encoding='utf-8'); "
+            f"sys.stderr.reconfigure(encoding='utf-8'){os.linesep}{code}"
+        )
         env = QC.QProcessEnvironment()
         env.insert(execenv.XMLRPCPORT_ENV, str(execenv.xmlrpcport))
         sysenv = env.systemEnvironment()
@@ -305,6 +327,15 @@ print("All done!")
             exit_code: Exit code
             exit_status: Exit status
         """
+        self.__last_exit_code = exit_code
         self.print(_("# <== '%s' macro has finished") % self.title, eol_before=False)
         self.FINISHED.emit()
         self.process = None
+
+    def get_exit_code(self) -> int | None:
+        """Return last exit code of the macro process
+
+        Returns:
+            Last exit code or None if process has not finished yet
+        """
+        return self.__last_exit_code

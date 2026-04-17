@@ -11,28 +11,28 @@ The `datalab-platform` package requires the following Python modules:
       - >=3.9, <4
       - Python programming language
     * - guidata
-      - >= 3.13.3
+      - >= 3.13.4
       - Automatic GUI generation for easy dataset editing and display
     * - PlotPy
       - >= 2.8.2
       - Curve and image plotting tools for Python/Qt applications
     * - Sigima
-      - >= 1.0.2
+      - >= 1.1.2
       - Scientific computing engine for 1D signals and 2D images, part of the DataLab open-source platform.
     * - NumPy
-      - >= 1.22
+      - >= 1.22, < 2.5
       - Fundamental package for array computing in Python
     * - SciPy
-      - >= 1.10.1
+      - >= 1.10.1, < 1.17
       - Fundamental algorithms for scientific computing in Python
     * - scikit-image
-      - >= 0.19.2
+      - >= 0.19.2, < 0.27
       - Image processing in Python
     * - pandas
-      - >= 1.4
+      - >= 1.4, < 3.1
       - Powerful data structures for data analysis, time series, and statistics
     * - PyWavelets
-      - >= 1.2
+      - >= 1.2, < 2.0
       - PyWavelets, wavelet transform module
     * - psutil
       - >= 5.8
@@ -40,6 +40,15 @@ The `datalab-platform` package requires the following Python modules:
     * - packaging
       - >= 21.3
       - Core utilities for Python packages
+    * - fastapi
+      - >= 0.110.0
+      - FastAPI framework, high performance, easy to learn, fast to code, ready for production
+    * - uvicorn[standard]
+      - >= 0.27.0
+      - 
+    * - pydantic
+      - >= 2.0
+      - Data validation using Python type hints
 
 Optional modules for GUI support (Qt):
 
@@ -128,3 +137,6 @@ Optional modules for running test suite:
     * - pytest-xvfb
       - 
       - A pytest plugin to run Xvfb (or Xephyr/Xvnc) for tests.
+    * - httpx
+      - 
+      - The next generation HTTP client.

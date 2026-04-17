@@ -1,0 +1,177 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2023, DataLab Platform Developers
+# This file is distributed under the same license as the DataLab package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+msgid ""
+msgstr ""
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Version 0.10"
+msgstr ""
+
+msgid "DataLab Version 0.10.1 (2023-12-22)"
+msgstr "DataLab Version 0.10.1 (22/12/2023)"
+
+msgid "*Note*: V0.10.0 (released 2023-12-22) was almost immediately replaced by V0.10.1 due to a last minute bug fix"
+msgstr "*Note* : La V0.10.0 (publiée le 22/12/2023) a été presque immédiatement remplacée par la V0.10.1 en raison d'une correction de bug de dernière minute"
+
+msgid "💥 New features:"
+msgstr "💥 Nouvelles fonctionnalités :"
+
+msgid "Features common to signals and images:"
+msgstr "Fonctionnalités communes aux signaux et aux images :"
+
+msgid "Added \"Real part\" and \"Imaginary part\" features to \"Operation\" menu"
+msgstr "Ajout des fonctionnalités \"Partie réelle\" et \"Partie imaginaire\" au menu \"Opération\""
+
+msgid "Added \"Convert data type\" feature to \"Operation\" menu"
+msgstr "Ajout de la fonctionnalité \"Convertir le type de données\" au menu \"Opération\""
+
+msgid "Features added following user requests (12/18/2023 meetup @ CEA):"
+msgstr "Fonctionnalités ajoutées suite aux demandes des utilisateurs (rencontre du 18/12/2023 au CEA) :"
+
+msgid "Curve and image styles are now saved in the HDF5 file:"
+msgstr "Les styles de courbe et d'image sont désormais enregistrés dans le fichier HDF5 :"
+
+msgid "Curve style covers the following properties: color, line style, line width, marker style, marker size, marker edge color, marker face color, etc."
+msgstr "Le style de courbe couvre les propriétés suivantes : couleur, style de ligne, largeur de ligne, style de marqueur, taille de marqueur, couleur de bordure de marqueur, couleur de remplissage de marqueur, etc."
+
+msgid "Image style covers the following properties: colormap, interpolation, etc."
+msgstr "Le style d'image couvre les propriétés suivantes : colormap, interpolation, etc."
+
+msgid "Those properties were already persistent during the working session, but were lost when saving and reloading the HDF5 file"
+msgstr "Ces propriétés étaient déjà persistantes pendant la session de travail, mais étaient perdues lors de l'enregistrement et du rechargement du fichier HDF5"
+
+msgid "Now, those properties are saved in the HDF5 file and are restored when reloading the HDF5 file"
+msgstr "Désormais, ces propriétés sont enregistrées dans le fichier HDF5 et sont restaurées lors du rechargement du fichier HDF5"
+
+msgid "New profile extraction features for images:"
+msgstr "Nouvelles fonctionnalités d'extraction de profil pour les images :"
+
+msgid "Added \"Line profile\" to \"Operations\" menu, to extract a profile from an image along a row or a column"
+msgstr "Ajout de la fonctionnalité \"Profil rectiligne\" au menu \"Opérations\", pour extraire un profil d'une image le long d'une ligne ou d'une colonne"
+
+msgid "Added \"Average profile\" to \"Operations\" menu, to extract the average profile on a rectangular area of an image, along a row or a column"
+msgstr "Ajout de la fonctionnalité \"Profil moyen\" au menu \"Opérations\", pour extraire le profil moyen sur une zone rectangulaire d'une image, le long d'une ligne ou d'une colonne"
+
+msgid "Image LUT range (contrast/brightness settings) is now saved in the HDF5 file:"
+msgstr "La plage LUT de l'image (paramètres de contraste/luminosité) est désormais enregistrée dans le fichier HDF5 :"
+
+msgid "As for curve and image styles, the LUT range was already persistent during the working session, but was lost when saving and reloading the HDF5 file"
+msgstr "Comme pour les styles de courbe et d'image, la plage LUT était déjà persistante pendant la session de travail, mais était perdue lors de l'enregistrement et du rechargement du fichier HDF5"
+
+msgid "Now, the LUT range is saved in the HDF5 file and is restored when reloading it"
+msgstr "Désormais, la plage LUT est enregistrée dans le fichier HDF5 et est restaurée lors du rechargement"
+
+msgid "Added \"Auto-refresh\" and \"Refresh manually\" actions in \"View\" menu (and main toolbar):"
+msgstr "Ajout des actions \"Rafraîchissement automatique\" et \"Rafraîchissement manuel\" dans le menu \"Affichage\" (et la barre d'outils principale) :"
+
+msgid "When \"Auto-refresh\" is enabled (default), the plot view is automatically refreshed when a signal/image is modified, added or removed. Even though the refresh is optimized, this may lead to performance issues when working with large datasets."
+msgstr "Lorsque \"Rafraîchissement automatique\" est activé (par défaut), la vue du graphique est automatiquement rafraîchie lorsqu'un signal/image est modifié, ajouté ou supprimé. Même si le rafraîchissement est optimisé, cela peut entraîner des problèmes de performances lors de l'utilisation de grands ensembles de données."
+
+msgid "When disabled, the plot view is not automatically refreshed. The user must manually refresh the plot view by clicking on the \"Refresh manually\" button in the main toolbar or by pressing the standard refresh key (e.g. \"F5\")."
+msgstr "Lorsqu'il est désactivé, la vue du graphique n'est pas automatiquement rafraîchie. L'utilisateur doit rafraîchir manuellement la vue du graphique en cliquant sur le bouton \"Rafraîchir manuellement\" de la barre d'outils principale ou en appuyant sur la touche de rafraîchissement standard (par exemple \"F5\")."
+
+msgid "Added `toggle_auto_refresh` method to DataLab proxy object:"
+msgstr "Ajout de la méthode `toggle_auto_refresh` à l'objet proxy de DataLab :"
+
+msgid "This method allows to toggle the \"Auto-refresh\" feature from a macro-command, a plugin or a remote control client."
+msgstr "Cette méthode permet d'activer/désactiver la fonctionnalité \"Rafraîchissement automatique\" à partir d'une macro-commande, d'un plugin ou d'un client de contrôle à distance."
+
+msgid "A context manager `context_no_refresh` is also available to temporarily disable the \"Auto-refresh\" feature from a macro-command, a plugin or a remote control client. Typical usage:"
+msgstr "Un gestionnaire de contexte `context_no_refresh` est également disponible pour désactiver temporairement la fonctionnalité \"Rafraîchissement automatique\" à partir d'une macro-commande, d'un plugin ou d'un client de contrôle à distance. Utilisation typique :"
+
+msgid "Improved curve readability:"
+msgstr "Amélioration de la lisibilité des courbes :"
+
+msgid "Until this release, the curve style was automatically set by cycling through **PlotPy** predefined styles"
+msgstr "Jusqu'à cette version, le style de la courbe était automatiquement défini en faisant défiler les styles prédéfinis de **PlotPy**"
+
+msgid "However, some styles are not suitable for curve readability (e.g. \"cyan\" and \"yellow\" colors are not readable on a white background, especially when combined with a \"dashed\" line style)"
+msgstr "Cependant, certains styles ne sont pas adaptés à la lisibilité des courbes (par exemple, les couleurs \"cyan\" et \"jaune\" ne sont pas lisibles sur un fond blanc, en particulier lorsqu'elles sont combinées avec un style de ligne \"pointillée\")"
+
+msgid "This release introduces a new curve style management with colors which are distinguishable and accessible, even to color vision deficiency people"
+msgstr "Cette version introduit une nouvelle gestion du style de courbe avec des couleurs qui sont distinguables et accessibles, même pour les personnes atteintes de déficience de la vision des couleurs"
+
+msgid "Added \"Curve anti-aliasing\" feature to \"View\" menu (and toolbar):"
+msgstr "Ajout de la fonctionnalité \"Anti-aliasing de la courbe\" au menu \"Affichage\" (et à la barre d'outils) :"
+
+msgid "This feature allows to enable/disable curve anti-aliasing (default: enabled)"
+msgstr "Cette fonctionnalité permet d'activer/désactiver l'anti-aliasing de la courbe (par défaut : activé)"
+
+msgid "When enabled, the curve rendering is smoother but may lead to performance issues when working with large datasets (that's why it can be disabled)"
+msgstr "Lorsqu'il est activé, le rendu de la courbe est plus lisse mais peut entraîner des problèmes de performances lors de l'utilisation de grands ensembles de données (c'est pourquoi il peut être désactivé)"
+
+msgid "Added `toggle_show_titles` method to DataLab proxy object. This method allows to toggle the \"Show graphical object titles\" feature from a macro-command, a plugin or a remote control client."
+msgstr "Ajout de la méthode `toggle_show_titles` à l'objet proxy de DataLab. Cette méthode permet d'activer/désactiver la fonctionnalité \"Afficher les titres des objets graphiques\" à partir d'une macro-commande, d'un plugin ou d'un client de contrôle à distance."
+
+msgid "Remote client is now checking the server version and shows a warning message if the server version may not be fully compatible with the client version."
+msgstr "Le client distant vérifie désormais la version du serveur et affiche un message d'avertissement si la version du serveur n'est peut-être pas entièrement compatible avec la version du client."
+
+msgid "🛠️ Bug fixes:"
+msgstr "🛠️ Correctifs :"
+
+msgid "Image contour detection feature (\"Analysis\" menu):"
+msgstr "Fonctionnalité de détection des contours de l'image (menu Analyseer\") :"
+
+msgid "The contour detection feature was not taking into account the \"shape\" parameter (circle, ellipse, polygon) when computing the contours. The parameter was stored but really used only when calling the feature a second time."
+msgstr "La fonctionnalité de détection des contours ne prenait pas en compte le paramètre \"shape\" (cercle, ellipse, polygone) lors du calcul des contours. Le paramètre était stocké mais vraiment utilisé uniquement lors de l'appel de la fonctionnalité une deuxième fois."
+
+msgid "This unintentional behavior led to an `AssertionError` when choosing \"polygon\" as the contour shape and trying to compute the contours for the first time."
+msgstr "Ce comportement involontaire a conduit à une `AssertionError` lors du choix de \"polygone\" comme forme de contour et de la tentative de calcul des contours pour la première fois."
+
+msgid "This is now fixed (see [Issue #9](https://github.com/DataLab-Platform/DataLab/issues/9) - Image contour detection: `AssertionError` when choosing \"polygon\" as the contour shape)"
+msgstr "Ceci est maintenant corrigé (voir [Issue #9](https://github.com/DataLab-Platform/DataLab/issues/9) - Détection des contours de l'image : `AssertionError` lors du choix de \"polygone\" comme forme de contour)"
+
+msgid "Keyboard shortcuts:"
+msgstr "Raccourcis clavier :"
+
+msgid "The keyboard shortcuts for \"New\", \"Open\", \"Save\", \"Duplicate\", \"Remove\", \"Delete all\" and \"Refresh manually\" actions were not working properly."
+msgstr "Les raccourcis clavier pour les actions \"Nouveau\", \"Ouvrir\", \"Enregistrer\", \"Dupliquer\", \"Supprimer\", \"Tout supprimer\" et \"Rafraîchir manuellement\" ne fonctionnaient pas correctement."
+
+msgid "Those shortcuts were specific to each signal/image panel, and were working only when the panel on which the shortcut was pressed for the first time was active (when activated from another panel, the shortcut was not working and a warning message was displayed in the console, e.g. `QAction::event: Ambiguous shortcut overload: Ctrl+C`)"
+msgstr "Ces raccourcis étaient spécifiques à chaque panneau de signal/image et ne fonctionnaient que lorsque le panneau sur lequel le raccourci a été pressé pour la première fois était actif (lorsqu'il était activé à partir d'un autre panneau, le raccourci ne fonctionnait pas et un message d'avertissement était affiché dans la console, par exemple `QAction::event: Ambiguous shortcut overload: Ctrl+C`)"
+
+msgid "Besides, the shortcuts were not working at startup (when no panel had focus)."
+msgstr "De plus, les raccourcis ne fonctionnaient pas au démarrage (lorsqu'aucun panneau n'avait le focus)."
+
+msgid "This is now fixed: the shortcuts are now working whatever the active panel is, and even at startup (see [Issue #10](https://github.com/DataLab-Platform/DataLab/issues/10) - Keyboard shortcuts not working properly: `QAction::event: Ambiguous shortcut overload: Ctrl+C`)"
+msgstr "Ceci est maintenant corrigé : les raccourcis fonctionnent maintenant quel que soit le panneau actif, et même au démarrage (voir [Issue #10](https://github.com/DataLab-Platform/DataLab/issues/10) - Raccourcis clavier ne fonctionnant pas correctement : `QAction::event: Ambiguous shortcut overload: Ctrl+C`)"
+
+msgid "\"Show graphical object titles\" and \"Auto-refresh\" actions were not working properly:"
+msgstr "Les actions \"Afficher les titres des objets graphiques\" et \"Rafraîchissement automatique\" ne fonctionnaient pas correctement :"
+
+msgid "The \"Show graphical object titles\" and \"Auto-refresh\" actions were only working on the active signal/image panel, and not on all panels."
+msgstr "Les actions \"Afficher les titres des objets graphiques\" et \"Rafraîchissement automatique\" ne fonctionnaient que sur le panneau de signal/image actif, et non sur tous les panneaux."
+
+msgid "This is now fixed (see [Issue #11](https://github.com/DataLab-Platform/DataLab/issues/11) - \"Show graphical object titles\" and \"Auto-refresh\" actions were working only on current signal/image panel)"
+msgstr "Ceci est maintenant corrigé (voir [Issue #11](https://github.com/DataLab-Platform/DataLab/issues/11) - Les actions \"Afficher les titres des objets graphiques\" et \"Rafraîchissement automatique\" ne fonctionnaient que sur le panneau de signal/image actuel)"
+
+msgid "Fixed [Issue #14](https://github.com/DataLab-Platform/DataLab/issues/14) - Saving/Reopening HDF5 project without cleaning-up leads to `ValueError`"
+msgstr "Correction de l'[Issue #14](https://github.com/DataLab-Platform/DataLab/issues/14) - Enregistrer/Réouvrir le projet HDF5 sans nettoyage entraîne une `ValueError`"
+
+msgid "Fixed [Issue #15](https://github.com/DataLab-Platform/DataLab/issues/15) - MacOS: 1. `pip install cdl` error - 2. Missing menus:"
+msgstr "Correction de l'[Issue #15](https://github.com/DataLab-Platform/DataLab/issues/15) - MacOS : 1. Erreur `pip install cdl` - 2. Menus manquants :"
+
+msgid "Part 1: `pip install cdl` error on MacOS was actually an issue from **PlotPy** (see [this issue](https://github.com/PlotPyStack/PlotPy/issues/9)), and has been fixed in PlotPy v2.0.3 with an additional compilation flag indicating to use C++11 standard"
+msgstr "Partie 1 : l'erreur `pip install cdl` sur MacOS était en fait un problème de **PlotPy** (voir [ce problème]"
+
+msgid "Part 2: Missing menus on MacOS was due to a PyQt/MacOS bug regarding dynamic menus"
+msgstr "Partie 2 : les menus manquants sur MacOS étaient dus à un bogue PyQt/MacOS concernant les menus dynamiques"
+
+msgid "HDF5 file format: when importing an HDF5 dataset as a signal or an image, the dataset attributes were systematically copied to signal/image metadata: we now only copy the attributes which match standard data types (integers, floats, strings) to avoid errors when serializing/deserializing the signal/image object"
+msgstr "Format de fichier HDF5 : lors de l'importation d'un ensemble de données HDF5 en tant que signal ou image, les attributs de l'ensemble de données étaient systématiquement copiés dans les métadonnées du signal/image : nous ne copions désormais que les attributs qui correspondent aux types de données standard (entiers, flottants, chaînes de caractères) pour éviter les erreurs lors de la sérialisation/désérialisation de l'objet signal/image"
+
+msgid "Installation/configuration viewer: improved readability (removed syntax highlighting)"
+msgstr "Visualiseur d'installation/configuration : amélioration de la lisibilité (suppression de la coloration syntaxique)"
+
+msgid "PyInstaller specification file: added missing `skimage` data files manually in order to continue supporting Python 3.8 (see [Issue #12](https://github.com/DataLab-Platform/DataLab/issues/12) - Stand-alone version on Windows 7: missing `api-ms-win-core-path-l1-1-0.dll`)"
+msgstr "Fichier de spécification de PyInstaller : ajout manuel des fichiers de données `skimage` manquants afin de continuer à prendre en charge Python 3.8 (voir [Issue #12](https://github.com/DataLab-Platform/DataLab/issues/12) - Version autonome sur Windows 7 : `api-ms-win-core-path-l1-1-0.dll` manquant)"
+
+msgid "Fixed [Issue #13](https://github.com/DataLab-Platform/DataLab/issues/13) - ArchLinux: `qt.qpa.plugin: Could not load the Qt platform plugin \"xcb\" in \"\" even though it was found`"
+msgstr "Correction de l'[Issue #13](https://github.com/DataLab-Platform/DataLab/issues/13) - ArchLinux : `qt.qpa.plugin: Could not load the Qt platform plugin \"xcb\" in \"\" even though it was found`"

@@ -4,7 +4,7 @@
 Object model
 ============
 
-The :mod:`datalab.gui.objectmodel` module defines the object data model used by the
+The :mod:`datalab.objectmodel` module defines the object data model used by the
 GUI to store signals, images and groups.
 
 The model is based on a hierarchical tree of objects, with two levels:
@@ -189,7 +189,7 @@ class ObjectGroup:
 
     def get_object_ids(self) -> list[str]:
         """Return object ids in group"""
-        return self.__objects
+        return self.__objects.copy()
 
 
 class ObjectModel:
