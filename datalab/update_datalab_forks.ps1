@@ -1,15 +1,19 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Met à jour les paquets DataLab (forks personnels sur GitHub) dans l'environnement conda "datalab" — version Windows.
+    Updates the DataLab packages (personal GitHub forks) in the conda environment "datalab" - Windows version.
 
 .DESCRIPTION
-    Equivalent PowerShell (conda) de update_datalab_forks.sh :
-      - active l'environnement conda via la fonction py_datalab (conda activate datalab)
-      - installe en UNE SEULE commande uv les 6 forks git+https (résolution cohérente)
-      - génère un fichier d'overrides uv (redirige les pins internes)
-      - -Sync       : synchronise les clones locaux (FORKS_DIR) avec leurs upstreams
-      - -SyncRemote : synchronise les forks directement sur GitHub (gh ou API REST), SANS clone local
+    PowerShell/conda equivalent of update_datalab_forks.sh :
+      - activates the conda env via the py_datalab function (conda activate datalab)
+      - installs the 6 git+https forks in ONE single uv command (coherent resolution)
+      - generates a uv overrides file (redirects internal pins, e.g. guiqwt -> guidata==3.1)
+      - -Sync       : syncs local clones (FORKS_DIR) with their upstreams first
+      - -SyncRemote : syncs the forks directly on GitHub (gh or REST API), NO local clone needed
+
+    NOTE: this script is 100% ASCII on purpose. Windows PowerShell 5.1 reads .ps1 files
+    without a BOM as ANSI, so any accented character would break parsing. Keep it ASCII,
+    or save the file as UTF-8 WITH BOM if you add accents back.
 
 .EXAMPLE
     .\update_datalab_forks.ps1
@@ -17,62 +21,62 @@
     .\update_datalab_forks.ps1 -SyncRemote -DryRun
 .EXAMPLE
     $env:CONDA_ENV = 'datalab'
-    $env:CONSTRAINTS_FILE = "$HOME\datalab-constraints.txt"   # ex: pandas>=1.4,<3.1 / scipy>=1.10.1,<1.17
+    $env:CONSTRAINTS_FILE = "$HOME\datalab-constraints.txt"   # e.g. pandas>=1.4,<3.1 / scipy>=1.10.1,<1.17
     .\update_datalab_forks.ps1
 
 .NOTES
-    Si l'execution policy bloque le script :  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-    ou : powershell -ExecutionPolicy Bypass -File .\update_datalab_forks.ps1
+    If the execution policy blocks the script:  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+    or: powershell -ExecutionPolicy Bypass -File .\update_datalab_forks.ps1
 #>
 [CmdletBinding()]
 param(
-    [switch]$DryRun,                              # simulation, aucun changement
-    [switch]$Reinstall,                           # force la réinstallation complète
-    [switch]$NoOverrides,                         # désactive les --override uv
-    [switch]$Sync,                                # sync des clones locaux (FORKS_DIR) avant mise à jour
-    [switch]$SyncRemote,                          # sync des forks sur GitHub (gh ou GITHUB_TOKEN) avant mise à jour
+    [switch]$DryRun,                              # simulation, no change
+    [switch]$Reinstall,                           # force full reinstall
+    [switch]$NoOverrides,                         # disable uv --override
+    [switch]$Sync,                                # sync local clones (FORKS_DIR) before updating
+    [switch]$SyncRemote,                          # sync forks on GitHub (gh or GITHUB_TOKEN) before updating
     [string]$ConstraintsFile = $env:CONSTRAINTS_FILE
 )
 
 $ErrorActionPreference = 'Stop'
 
 # ---------------------------------------------------------------------------
-# Préambule : activation de l'environnement conda via "py_datalab"
+# Preamble: activate the conda environment via "py_datalab"
 # ---------------------------------------------------------------------------
 $CONDA_ENV = [Environment]::GetEnvironmentVariable('CONDA_ENV')
 if (-not $CONDA_ENV) { $CONDA_ENV = 'datalab'; $env:CONDA_ENV = $CONDA_ENV }
 
 $condaCmd = Get-Command conda -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $condaCmd) {
-    Write-Error "ERREUR : 'conda' est introuvable dans le PATH (conda non installé ou non initialisé)."
+    Write-Error "ERROR: 'conda' not found in PATH (conda not installed or not initialized)."
     exit 1
 }
 if ($condaCmd.CommandType -ne 'Function') {
-    # Charge le hook PowerShell de conda (utile si 'conda init powershell' n'a pas été fait)
+    # Load conda's PowerShell hook (useful if 'conda init powershell' was never run)
     (& $condaCmd.Source 'shell.powershell' 'hook') | Out-String | Invoke-Expression
 }
 
-# Équivalent conda de l'alias bash py_datalab='source "$VENV_datalab/bin/activate"'
+# conda equivalent of the bash alias py_datalab='source "$VENV_datalab/bin/activate"'
 function py_datalab { conda activate $env:CONDA_ENV }
 py_datalab
 
 if ($env:CONDA_DEFAULT_ENV -ne $env:CONDA_ENV) {
-    Write-Error "ERREUR : l'environnement conda '$env:CONDA_ENV' n'a pas pu être activé (conda activate a échoué ?)."
+    Write-Error "ERROR: conda environment '$env:CONDA_ENV' could not be activated (conda activate failed?)."
     exit 1
 }
-Write-Host "Environnement conda actif : $env:CONDA_DEFAULT_ENV ($env:CONDA_PREFIX)"
+Write-Host "Active conda environment: $env:CONDA_DEFAULT_ENV ($env:CONDA_PREFIX)"
 python --version
 
 # ---------------------------------------------------------------------------
-# Vérifications préalables
+# Preliminary checks
 # ---------------------------------------------------------------------------
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-    Write-Error "ERREUR : 'uv' n'est pas installé (voir https://docs.astral.sh/uv/)"
+    Write-Error "ERROR: 'uv' is not installed (see https://docs.astral.sh/uv/)"
     exit 1
 }
 
 # ---------------------------------------------------------------------------
-# Paquets à mettre à jour (forks GitHub) + upstreams
+# Packages to update (GitHub forks) + upstreams
 # ---------------------------------------------------------------------------
 $GITHUB_USER  = [Environment]::GetEnvironmentVariable('GITHUB_USER');  if (-not $GITHUB_USER)  { $GITHUB_USER = 'deuterium33' }
 $BRANCH       = [Environment]::GetEnvironmentVariable('BRANCH')
@@ -92,49 +96,49 @@ $UPSTREAM = @{
 $AUTH = ''
 if ($GITHUB_TOKEN) { $AUTH = 'x-access-token:' + $GITHUB_TOKEN + '@' }
 
-# Options transmises à uv :
-#   --upgrade : met à jour les paquets ET leurs dépendances
-#   --refresh : ignore le cache, récupère le dernier commit de chaque fork
+# Options passed to uv :
+#   --upgrade : upgrades packages AND their dependencies
+#   --refresh : ignores the cache, fetches the latest commit of each fork
 $uvOpts = @('--upgrade', '--refresh')
 if ($DryRun)    { $uvOpts += '--dry-run' }
 if ($Reinstall) { $uvOpts += '--reinstall' }
 
-# Contraintes optionnelles (bornes pandas/SciPy, etc.)
+# Optional constraints (pandas/SciPy bounds, etc.)
 $constraintOpts = @()
 if ($ConstraintsFile) {
     if (-not (Test-Path $ConstraintsFile)) {
-        Write-Error "ERREUR : CONSTRAINTS_FILE=$ConstraintsFile introuvable"
+        Write-Error "ERROR: CONSTRAINTS_FILE=$ConstraintsFile not found"
         exit 1
     }
     $constraintOpts = @('--constraint', $ConstraintsFile)
 }
 
 # ---------------------------------------------------------------------------
-# Synchronisation des forks
+# Fork synchronization
 # ---------------------------------------------------------------------------
 function Sync-ForkLocal {
     param([string]$Pkg)
     $dir = Join-Path $FORKS_DIR $Pkg
     $upstream = $UPSTREAM[$Pkg]
     if (-not (Test-Path (Join-Path $dir '.git'))) {
-        Write-Host "  ! $Pkg : $dir n'est pas un clone git, ignoré"
-        Write-Host "    (cloner d'abord : git clone https://github.com/$GITHUB_USER/$Pkg.git vers ce dossier)"
+        Write-Host "  ! $Pkg : $dir is not a git clone, skipped"
+        Write-Host "    (clone first: git clone https://github.com/$GITHUB_USER/$Pkg.git into that folder)"
         return
     }
-    Write-Host "  → $Pkg : synchronisation depuis $upstream"
+    Write-Host "  -> $Pkg : syncing from $upstream"
     if (-not (git -C $dir remote | Select-String -SimpleMatch 'upstream')) {
         git -C $dir remote add upstream "https://github.com/$upstream.git"
     }
     git -C $dir fetch upstream --prune
-    git -C $dir remote set-head upstream --auto   # branche par défaut de l'upstream (master, main, ...)
+    git -C $dir remote set-head upstream --auto   # default branch of the upstream (master, main, ...)
     if (git -C $dir status --porcelain) {
-        Write-Error "  ! $Pkg : working tree sale dans $dir, synchronisation annulée pour ce dépôt"
+        Write-Error "  ! $Pkg : dirty working tree in $dir, sync aborted for this repo"
         exit 1
     }
     $branch = git -C $dir rev-parse --abbrev-ref HEAD
     git -C $dir merge --no-edit upstream/HEAD
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "  ! $Pkg : conflit de merge dans $dir — résous manuellement (git -C <dir> status, git add, git merge --continue)"
+        Write-Error "  ! $Pkg : merge conflict in $dir - resolve manually (git -C <dir> status, git add, git merge --continue)"
         exit 1
     }
     if ($GITHUB_TOKEN) {
@@ -142,19 +146,19 @@ function Sync-ForkLocal {
     } else {
         git -C $dir push origin $branch
     }
-    if ($LASTEXITCODE -ne 0) { Write-Error "  ! $Pkg : push échoué"; exit 1 }
+    if ($LASTEXITCODE -ne 0) { Write-Error "  ! $Pkg : push failed"; exit 1 }
 }
 
 function Sync-ForkRemote {
     param([string]$Pkg)
-    Write-Host "  → $GITHUB_USER/$Pkg"
+    Write-Host "  -> $GITHUB_USER/$Pkg"
     if (Get-Command gh -ErrorAction SilentlyContinue) {
-        gh repo sync "$GITHUB_USER/$Pkg"   # sync la branche par défaut du fork depuis le parent (upstream)
-        if ($LASTEXITCODE -ne 0) { Write-Error "  ! échec du sync gh pour $Pkg (conflit côté fork ?)"; exit 1 }
+        gh repo sync "$GITHUB_USER/$Pkg"   # sync the fork's default branch from its parent (upstream)
+        if ($LASTEXITCODE -ne 0) { Write-Error "  ! gh sync failed for $Pkg (conflict on the fork side?)"; exit 1 }
         return
     }
     if (-not $GITHUB_TOKEN) {
-        Write-Error "ERREUR : -SyncRemote requiert 'gh' (gh auth login) ou la variable d'environnement GITHUB_TOKEN"
+        Write-Error "ERROR: -SyncRemote requires 'gh' (gh auth login) or the GITHUB_TOKEN environment variable"
         exit 1
     }
     $headers = @{
@@ -175,28 +179,28 @@ function Sync-ForkRemote {
         }
         Invoke-RestMethod @syncParams
     } catch {
-        Write-Error "  ! échec du sync API pour $Pkg : $($_.Exception.Message)"
+        Write-Error "  ! API sync failed for $Pkg : $($_.Exception.Message)"
         exit 1
     }
 }
 
 if ($Sync) {
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Error "ERREUR : 'git' est requis pour -Sync"; exit 1 }
-    Write-Host "Synchronisation des forks locaux (FORKS_DIR=$FORKS_DIR) avec leurs upstreams..."
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Error "ERROR: 'git' is required for -Sync"; exit 1 }
+    Write-Host "Syncing local forks (FORKS_DIR=$FORKS_DIR) with their upstreams..."
     foreach ($pkg in $PACKAGES) { Sync-ForkLocal -Pkg $pkg }
-    Write-Host "Synchronisation terminée."
+    Write-Host "Sync finished."
     Write-Host ""
 }
 
 if ($SyncRemote) {
-    Write-Host "Synchronisation distante des forks $GITHUB_USER/* depuis leurs upstreams (GitHub)..."
+    Write-Host "Remote-syncing forks $GITHUB_USER/* from their upstreams (GitHub)..."
     foreach ($pkg in $PACKAGES) { Sync-ForkRemote -Pkg $pkg }
-    Write-Host "Synchronisation distante terminée."
+    Write-Host "Remote sync finished."
     Write-Host ""
 }
 
 # ---------------------------------------------------------------------------
-# Construction des dépôts git+https + fichier d'overrides uv
+# Build the git+https repo list + uv overrides file
 # ---------------------------------------------------------------------------
 $overrides = Join-Path $env:TEMP "datalab-overrides.$PID.txt"
 try {
@@ -206,44 +210,43 @@ try {
         $url = 'git+https://' + $AUTH + "github.com/$GITHUB_USER/$pkg.git"
         if ($BRANCH) { $url = "$url@$BRANCH" }
         $requirements  += $url
-        # Override : toute dépendance interne sur ce paquet (même un pin ==x.y)
-        # est remplacée par le fork git correspondant.
+        # Override: any internal dependency on this package (even a ==x.y pin)
+        # is replaced by the corresponding git fork.
         $overrideLines += "$pkg @ $url"
     }
     $overrideLines | Set-Content -Path $overrides -Encoding ascii
 
-    Write-Host "Dépôts mis à jour :"
+    Write-Host "Repos being updated:"
     $requirements | ForEach-Object { Write-Host "  - $_" }
     Write-Host ""
 
     # ---------------------------------------------------------------------------
-    # Installation : UNE SEULE commande pour tous les paquets, pour que le
-    # résolveur voie l'ensemble des contraintes en une fois et choisisse un jeu
-    # de dépendances globalement cohérent.
+    # Installation: ONE single command for all packages, so that the resolver
+    # sees all constraints at once and picks a globally coherent dependency set.
     # ---------------------------------------------------------------------------
-    Write-Host "Mise à jour des $($requirements.Count) paquets..."
+    Write-Host "Updating $($requirements.Count) packages..."
     $installArgs = @('pip', 'install') + $uvOpts
     if (-not $NoOverrides) { $installArgs += @('--override', $overrides) }
     $installArgs += $constraintOpts + $requirements
     uv @installArgs
-    if ($LASTEXITCODE -ne 0) { Write-Error "ERREUR : uv pip install a échoué"; exit 1 }
+    if ($LASTEXITCODE -ne 0) { Write-Error "ERROR: uv pip install failed"; exit 1 }
 
     # ---------------------------------------------------------------------------
-    # Post-traitement : cohérence de l'environnement + paquets encore obsolètes
+    # Post-processing: environment consistency + still outdated packages
     # ---------------------------------------------------------------------------
     Write-Host ""
-    Write-Host "Vérification de la cohérence de l'environnement..."
+    Write-Host "Checking environment consistency..."
     uv pip check
-    if ($LASTEXITCODE -eq 0) { Write-Host "OK : aucune dépendance cassée." }
-    else { Write-Warning "ATTENTION : des conflits de dépendances ont été détectés." }
+    if ($LASTEXITCODE -eq 0) { Write-Host "OK: no broken dependencies." }
+    else { Write-Warning "WARNING: dependency conflicts detected." }
 
     Write-Host ""
-    Write-Host "Paquets tiers encore pas à jour (informatif, non modifiés) :"
+    Write-Host "Third-party packages still outdated (informational, not modified):"
     uv pip list --outdated
-    if ($LASTEXITCODE -ne 0) { Write-Host "(uv pip list --outdated indisponible sur cette version de uv)" }
+    if ($LASTEXITCODE -ne 0) { Write-Host "(uv pip list --outdated not available in this uv version)" }
 
     Write-Host ""
-    Write-Host "Mise à jour terminée."
+    Write-Host "Update finished."
 }
 finally {
     Remove-Item $overrides -ErrorAction SilentlyContinue
